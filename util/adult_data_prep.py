@@ -125,7 +125,7 @@ def main():
 
     np.savez(data_npz, x_train=dataset['training']['X'], x_test=dataset['test']['X'],
                 y_train=dataset['training']['Y'], y_test=dataset['test']['Y'],
-                attr_train=dataset['training']['A'], attr_test=dataset['test']['A'],
+                a_train=dataset['training']['A'], a_test=dataset['test']['A'],
                 train_idxs=train_idxs, valid_inds=valid_idxs)
 
     print('Successfully prepared data!')
