@@ -3,7 +3,7 @@ from pathlib import Path
 from sys import exit
 
 def main():    
-    data_folder = Path(r'/home/luiz/ufpb/mestrado/code/falsb/data/adult_data')
+    data_folder = Path(r'/home/luiz/ufpb/mestrado/code/falsb/data/adult')
     
     unprep_train = data_folder/'adult.data'
     unprep_test = data_folder/'adult.test'
@@ -126,7 +126,7 @@ def main():
     np.savez(data_npz, x_train=dataset['training']['X'], x_test=dataset['test']['X'],
                 y_train=dataset['training']['Y'], y_test=dataset['test']['Y'],
                 a_train=dataset['training']['A'], a_test=dataset['test']['A'],
-                train_idxs=train_idxs, valid_inds=valid_idxs)
+                train_idxs=train_idxs, valid_idxs=valid_idxs)
 
     print('Successfully prepared data!')
 

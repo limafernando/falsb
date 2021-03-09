@@ -145,6 +145,17 @@ class Dataset(object):
         iterator = DatasetIterator([x, y, a], batch_idxs)
         return iterator
 
+    def get_shapes(self):
+        x_train = self.x_train.shape
+        y_train = self.y_train.shape
+        a_train = self.a_train.shape
+        x_test = self.x_test.shape
+        y_test = self.y_test.shape
+        a_test = self.a_test.shape
+        x_valid = self.x_valid.shape
+        y_valid = self.y_valid.shape
+        a_valid = self.a_valid.shape
+        return x_train, y_train, a_train, x_test, y_test, a_test, x_valid, y_valid, a_valid
 
 class TransferDataset(Dataset):
     def __init__(self, reprs, A, label_index, Y_loaded=None, phase='Test', **data_kwargs):
