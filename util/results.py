@@ -1,7 +1,8 @@
 import numpy as np
 import os
 import tensorflow as tf
-from codebase.utils import make_dir_if_not_exist #TODO change this import
+#from codebase.utils import make_dir_if_not_exist #TODO change this import
+from util.read_data import make_dir_if_not_exist
 
 class ResultLogger(object):
     def __init__(self, dname, saver=None):
@@ -11,9 +12,10 @@ class ResultLogger(object):
         make_dir_if_not_exist(self.ckptdir)
         self.npzdir = os.path.join(self.dname, 'npz')
         make_dir_if_not_exist(self.npzdir)
-        self.saver = saver if not saver is None else tf.train.Saver()
+        self.saver = saver if not saver is None else tf.compat.v1.train.Saver()
         self.testcsv_name = os.path.join(self.dname, 'test_metrics.csv')
         self.testcsv = open(self.testcsv_name, 'w')
+        
 
     def save_metrics(self, metrics_dict):
         """save metrics_dict (a dictionary of metrics: string to float) as csv"""
@@ -27,3 +29,5 @@ class ResultLogger(object):
         for k in metrics_dict:
             fname = os.path.join(self.npzdir, '{}.npz'.format(k))
             np.savez(fname, X=metrics_dict[k])
+
+    
