@@ -63,12 +63,12 @@ def main():
         'occupation': lambda x: onehot(x, options['occupation']),
         'relationship': lambda x: onehot(x, options['relationship']),
         'race': lambda x: onehot(x, options['race']),
-        'sex': lambda x: onehot(x, options['sex']),
+        'sex': lambda x: categorical2numerical(x, options['sex']),
         'capital-gain': lambda x: continuous(x),
         'capital-loss': lambda x: continuous(x),
         'hours-per-week': lambda x: continuous(x),
         'native-country': lambda x: onehot(x, options['native-country']),
-        'income': lambda x: onehot(x.strip('.'), options['income']),
+        'income': lambda x: categorical2numerical(x.strip('.'), options['income']) #strip is needed for test data -> rows ended with '.'
     }
 
     dataset = {}
@@ -93,13 +93,19 @@ def main():
 
         npX = np.array(X)
         npY = np.array(Y)
+        npY = npY[:, np.newaxis]
         npA = np.array(A)
-        npA = np.expand_dims(npA[:,1], 1)
+        npA = npA[:, np.newaxis]
+        #print(Y)
+        #print(npY)
+        
+        print(npX.shape, npY.shape, npA.shape)
 
         dataset[phase] = {}
         dataset[phase]['X'] = npX
         dataset[phase]['Y'] = npY
         dataset[phase]['A'] = npA
+        #print(dataset['training'])
 
         valid_asserts(npX, npY, npA, phase)
 
@@ -122,6 +128,10 @@ def main():
                 i += 1
 
     valid_idxs, train_idxs = set_train_val_idxs(dataset)
+    #dataset['valid'], dataset['train'] = make_valid_set(valid_idxs, dataset['train'])
+    '''
+    fazer csv?
+    '''
 
     np.savez(data_npz, x_train=dataset['training']['X'], x_test=dataset['test']['X'],
                 y_train=dataset['training']['Y'], y_test=dataset['test']['Y'],
@@ -153,7 +163,7 @@ def valid_asserts(npX, npY, npA, phase):
     if phase == 'training':
         try:
             assert npX.shape == (30162, 112)
-            assert npY.shape == (30162, 2)
+            assert npY.shape == (30162, 1)
             assert npA.shape == (30162, 1)
         except AssertionError:
             print('Something went wrong with our training data shape!')
@@ -162,7 +172,7 @@ def valid_asserts(npX, npY, npA, phase):
     if phase == 'test':
         try:
             assert npX.shape == (15060, 112)
-            assert npY.shape == (15060, 2)
+            assert npY.shape == (15060, 1)
             assert npA.shape == (15060, 1)
         except AssertionError:
             print('Something went wrong with our test data shape!')
@@ -189,6 +199,10 @@ def onehot(x, choices):
     template = [0. for j in range(len(choices))]
     template[label] = 1.
     return template
+
+def categorical2numerical(x, choices):
+    label = choices.index(x)
+    return label
 
 def continuous(x):
     return [float(x)]

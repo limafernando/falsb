@@ -31,17 +31,20 @@ class Dataset(object):
             data = np.load(self.npzfile)
             self.data = data
             self.x_train = data['x_train']
-            self.x_test = data['x_test']
-            self.a_train = data['a_train']
-            self.a_test = data['a_test']
-            print('y shape', data['y_train'].shape)
+            print(self.x_train.shape)
+            self.x_test = data['x_test'].astype(dtype='float32')
+            self.a_train = data['a_train'].astype(dtype='float32')
+            self.a_test = data['a_test'].astype(dtype='float32')
+            #print('y shape', data['y_train'].shape)
             if data['y_train'].shape[1] > 1:
-                print('changing shape')
+                #print('changing shape')
+                #for y in data['y_train']:
+                    #print(y)
                 self.y_train = np.expand_dims(data['y_train'][:,1], 1)
                 self.y_test = np.expand_dims(data['y_test'][:,1], 1)
             else:
-                self.y_train = data['y_train']
-                self.y_test = data['y_test']
+                self.y_train = data['y_train'].astype(dtype='float32')
+                self.y_test = data['y_test'].astype(dtype='float32')
 
             if self.pred_a:
                 self.y_train = self.a_train
@@ -52,17 +55,17 @@ class Dataset(object):
                 self.train_idxs = data['train_idxs']
                 self.valid_idxs = data['valid_idxs']
             if 'y2_train' in data:
-                self.y2_train = data['y2_train']
-                self.y2_test = data['y2_test']
+                self.y2_train = data['y2_train'].astype(dtype='float32')
+                self.y2_test = data['y2_test'].astype(dtype='float32')
 
             if 'x_valid' in data:
-                self.x_valid = data['x_valid']
+                self.x_valid = data['x_valid'].astype(dtype='float32')
                 self.y_valid = np.expand_dims(data['y_valid'][:,1], 1)
-                self.a_valid = data['a_valid']
+                self.a_valid = data['a_valid'].astype(dtype='float32')
 
             if not self.y2i is None:
 
-                print('using feature {:d}'.format(self.y2i))
+                #print('using feature {:d}'.format(self.y2i))
                 self.y_train = np.expand_dims(self.y2_train[:,self.y2i], 1)
                 self.y_test = np.expand_dims(self.y2_test[:, self.y2i], 1)
 
@@ -80,6 +83,7 @@ class Dataset(object):
             self.a_valid = self.a_train[self.valid_idxs]
 
             self.x_train = self.x_train[self.train_idxs]
+            print('mk val set', self.x_train.shape)
             self.y_train = self.y_train[self.train_idxs]
             self.a_train = self.a_train[self.train_idxs]
             
@@ -147,6 +151,7 @@ class Dataset(object):
 
     def get_shapes(self):
         x_train = self.x_train.shape
+        print(x_train)
         y_train = self.y_train.shape
         a_train = self.a_train.shape
         x_test = self.x_test.shape
@@ -193,7 +198,7 @@ class TransferDataset(Dataset):
         return train_idxs, valid_idxs
 
     def make_train_test_split(self, X, A, Y):
-        print(X.shape, A.shape, Y.shape)
+        #print(X.shape, A.shape, Y.shape)
         tr_idxs, te_idxs = self.make_valid_idxs(X, pct=0.3)
         X_tr = X[tr_idxs,:]
         X_te = X[te_idxs,:]
