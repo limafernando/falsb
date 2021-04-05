@@ -31,7 +31,7 @@ class Dataset(object):
             data = np.load(self.npzfile)
             self.data = data
             self.x_train = data['x_train']
-            print(self.x_train.shape)
+            #print(self.x_train.shape)
             self.x_test = data['x_test'].astype(dtype='float32')
             self.a_train = data['a_train'].astype(dtype='float32')
             self.a_test = data['a_test'].astype(dtype='float32')
@@ -83,7 +83,7 @@ class Dataset(object):
             self.a_valid = self.a_train[self.valid_idxs]
 
             self.x_train = self.x_train[self.train_idxs]
-            print('mk val set', self.x_train.shape)
+           #print('mk val set', self.x_train.shape)
             self.y_train = self.y_train[self.train_idxs]
             self.a_train = self.a_train[self.train_idxs]
             
@@ -151,7 +151,7 @@ class Dataset(object):
 
     def get_shapes(self):
         x_train = self.x_train.shape
-        print(x_train)
+       # print(x_train)
         y_train = self.y_train.shape
         a_train = self.a_train.shape
         x_test = self.x_test.shape
