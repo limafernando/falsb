@@ -67,16 +67,28 @@ def FN_soft(Y, Ypred):
 
 #note: TPR + FNR = 1; TNR + FPR = 1
 def TPR(Y, Ypred): #TP rate
-    return TP(Y, Ypred) / pos(Y)
+    posY = pos(Y)
+    if posY == 0:
+        return 0
+    else:
+        return TP(Y, Ypred) / posY
 
 def FPR(Y, Ypred): #FP rate
-    return FP(Y, Ypred) / neg(Y)
+    negY = neg(Y)
+    if negY == 0:
+        return 0
+    else:
+        return FP(Y, Ypred) / negY
 
 def TNR(Y, Ypred): #TN rate
     return TN(Y, Ypred) / neg(Y)
 
-def FNR(Y, Ypred): #TP rate
-    return FN(Y, Ypred) / pos(Y)
+def FNR(Y, Ypred): #FP rate
+    posY = pos(Y)
+    if posY == 0:
+        return 0
+    else:
+        return FN(Y, Ypred) / posY
 
 def FPR_soft(Y, Ypred):
     return FP_soft(Y, Ypred) / neg(Y)
@@ -97,20 +109,31 @@ def accuracy(Y, Ypred):
     return 1 - errRate(Y, Ypred)
 
 def subgroup(fn, mask, Y, Ypred=None):
+    #print('call subgroup')
     m = np.greater(mask, 0.5).flatten()
+    #print(m[:5])
     Yf = Y.flatten()
     if not Ypred is None: #two-argument functions
         Ypredf = Ypred.flatten()
+        #print('call function {}'.format(fn))
         return fn(Yf[m], Ypredf[m]) #access the indexes that are True (the True check subgroup)
     else: #one-argument functions
         return fn(Yf[m])
 
 def DI_FP(Y, Ypred, A):
+    #print('call di fp')
     fpr1 = subgroup(FPR, A, Y, Ypred)
     fpr0 = subgroup(FPR, 1 - A, Y, Ypred)
     return abs(fpr1 - fpr0)
+    
+def DI_TP(Y, Ypred, A):
+    #print('call di tp')
+    fpr1 = subgroup(TPR, A, Y, Ypred)
+    fpr0 = subgroup(TPR, 1 - A, Y, Ypred)
+    return abs(fpr1 - fpr0)
 
 def DI_FN(Y, Ypred, A):
+    #print('call di fn')
     fnr1 = subgroup(FNR, A, Y, Ypred)
     fnr0 = subgroup(FNR, 1 - A, Y, Ypred)
     return abs(fnr1 - fnr0)
@@ -125,13 +148,26 @@ def DI_FN_soft(Y, Ypred, A):
     fnr0 = subgroup(FNR_soft, 1 - A, Y, Ypred)
     return abs(fnr1 - fnr0)
 
+'''
+SHOULD CONSIDER TRUE POSITIVES AND FALSE POSITIVES
 def DI(Y, Ypred, A):
+    #print('call di')
     return (DI_FN(Y, Ypred, A) + DI_FP(Y, Ypred, A)) * 0.5
+'''
+def DI(Y, Ypred, A): #deltaEOdds
+    #print('call di')
+    return (DI_TP(Y, Ypred, A) + DI_FP(Y, Ypred, A)) * 0.5
 
-def DI_soft(Y, Ypred, A):
-    return (DI_FN_soft(Y, Ypred, A) + DI_FP_soft(Y, Ypred, A)) * 0.5
+''' CONSIDER THE TRUE POSITIVE FOR BOTH GROUPS
+def DI_soft(Y, Ypred, A): #deltaEOpp
+    return (DI_FN_soft(Y, Ypred, A) + DI_FP_soft(Y, Ypred, A)) * 0.5'''
 
-def DP(Ypred, A): #demographic disparity
+def DI_soft(Y, Ypred, A): #deltaEOpp
+    tpr1 = subgroup(TPR, A, Y, Ypred)
+    tpr0 = subgroup(TPR, 1 - A, Y, Ypred)
+    return abs(tpr1 - tpr0)*0.5
+
+def DP(Ypred, A): #deltaDP
     return abs(subgroup(PR, A, Ypred) - subgroup(PR, 1 - A, Ypred))
 
 def NLL(Y, Ypred, eps=eps):

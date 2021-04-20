@@ -4,8 +4,57 @@ from tensorflow.keras.initializers import GlorotNormal
 
 EPS = 1e-8
 CLASS_COEFF = 1.
-FAIR_COEFF = 0.
+FAIR_COEFF = 1.
 RECON_COEFF = 0.
+
+####################################################################################
+
+'''Unfair Classifier that uses the Fair Representation as input'''
+class UnfairClassifier(tf.Module):
+    def __init__(self, zdim, ydim, initializer = GlorotNormal):
+        super().__init__()
+
+        self.zdim = zdim #input dimension
+        self.hidden_layer = int(self.zdim/2)
+        self.ydim = ydim #output dimension
+        self.shapes = [self.zdim, self.hidden_layer, self.ydim]
+
+        self.ini = initializer()
+
+        self.is_built = False
+
+    def __call__(self, Z, Y, hidden_activ_fn=tf.nn.relu):
+
+        #ensure casting
+        Z = tf.dtypes.cast(Z, tf.float32)
+        Y = tf.dtypes.cast(Y, tf.float32)
+        
+        batch_size = Z.shape[0]
+        if not self.is_built:
+            self.Ws = [tf.Variable(self.ini(shape=(self.shapes[i+1], self.shapes[i])), name='UnfClas_Ws') 
+                                                                                for i in range(len(self.shapes)-1)]
+            self.bs = [tf.Variable(self.ini(shape=(batch_size, self.shapes[i+1])), name='UnfClas_bs') 
+                                                                                for i in range(len(self.shapes)-1)]
+
+            self.is_built = True                                                                                
+        
+        prev_layer = Z
+             
+        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[0])), self.bs[0])
+        layer = tf.nn.leaky_relu(layer) #hidden layer
+        
+        prev_layer = layer
+        
+        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[1])), self.bs[1]) #last layer
+
+        self.Y_hat = tf.nn.sigmoid(layer)
+        self.loss = self.get_class_loss(self.Y_hat, Y)
+        
+        
+    def get_class_loss(self, Y_hat, Y):
+        return cross_entropy(Y, Y_hat)
+
+######################################################################################################
 
 class Encoder(tf.Module):
     def __init__(self, xdim, hidden_layer_specs, zdim, initializer = GlorotNormal):
@@ -36,7 +85,7 @@ class Encoder(tf.Module):
         for layer_idx in range(len(self.hidden_layer_specs)):
             
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
-            layer = hidden_activ_fn(layer)
+            layer = tf.nn.leaky_relu(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
@@ -64,7 +113,7 @@ class Decoder(tf.Module):
             self.Ws = [tf.Variable(self.ini(shape=(self.shapes[i+1], self.shapes[i])), name='Dec_Ws') 
                                                                                 for i in range(len(self.shapes)-1)]
             self.bs = [tf.Variable(self.ini(shape=(batch_size, self.shapes[i+1])), name='Dec_bs') 
-                                                                                for i in range(len(self.shapes)-1)]
+                                                                                for i in range(len(self.shapes)-1)]                                                                                
 
             self.is_built = True
 
@@ -73,7 +122,7 @@ class Decoder(tf.Module):
         for layer_idx in range(len(self.hidden_layer_specs)):
 
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
-            layer = hidden_activ_fn(layer)
+            layer = tf.nn.leaky_relu(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
@@ -109,12 +158,12 @@ class Classifier(tf.Module):
         for layer_idx in range(len(self.hidden_layer_specs)):
 
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
-            layer = tf.nn.relu(layer)
+            layer = tf.nn.leaky_relu(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
-        return out_activ_fn(layer)
+        return tf.nn.sigmoid(layer)
 
 class Adversarial(tf.Module):
     def __init__(self, zdim, hidden_layer_specs, adim, initializer = GlorotNormal):
@@ -145,12 +194,12 @@ class Adversarial(tf.Module):
         for layer_idx in range(len(self.hidden_layer_specs)):
             
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
-            layer = hidden_activ_fn(layer)
+            layer = tf.nn.leaky_relu(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
-        return out_activ_fn(layer)
+        return tf.nn.sigmoid(layer)
 
 class DemParGan(tf.Module):
     """
@@ -179,21 +228,21 @@ class DemParGan(tf.Module):
     def __call__(self, X, Y, A):
         
         #ensure casting
-        X = tf.dtypes.cast(X, tf.float32)
-        Y = tf.dtypes.cast(Y, tf.float32)
-        A = tf.dtypes.cast(A, tf.float32)
+        self.X = tf.dtypes.cast(X, tf.float32)
+        self.Y = tf.dtypes.cast(Y, tf.float32)
+        self.A = tf.dtypes.cast(A, tf.float32)
         
-        self.Z = self.enc(X) #computes the latent representation
-        self.Y_hat = self.clas(self.Z, Y) #pred Y
-        self.A_hat = self.adv(self.Z) #adversarial prediction for A
-        self.X_hat = self.dec(tf.concat([self.Z, self.A_hat], 1)) #reconstructed X
-
-        self.class_loss = self.get_class_loss(self.Y_hat, Y)
-        self.recon_loss = self.get_recon_loss(self.X_hat, X)
-        self.adv_loss = self.get_advers_loss(self.A_hat, A)
+        self.Z = self.enc(self.X) #computes the latent representation
+        self.Y_hat = self.clas(self.Z, self.Y) #pred Y
+        self.A_hat = self.adv(self.get_adv_input()) #adversarial prediction for A
+        self.X_hat = self.dec(tf.concat([self.Z, self.A], 1)) #reconstructed X
+        
+        self.class_loss = self.get_class_loss(self.Y_hat, self.Y)
+        self.recon_loss = self.get_recon_loss(self.X_hat, self.X)
+        self.adv_loss = self.get_advers_loss(self.A_hat, self.A)
         self.loss = self.get_loss()
-        self.class_err = classification_error(Y, self.Y_hat)
-        self.adv_err = classification_error(A, self.A_hat)
+        self.class_err = classification_error(self.Y, self.Y_hat)
+        self.adv_err = classification_error(self.A, self.A_hat)
 
         return (self.Z, self.Y_hat, self.A_hat, self.X_hat, 
                 self.class_loss, self.recon_loss, self.adv_loss, self.loss, self.class_err, self.adv_err)
@@ -214,32 +263,25 @@ class DemParGan(tf.Module):
             -self.fair_coeff*self.adv_loss
         ])
 
+    def get_adv_input(self):
+        return self.Z
+
 class EqOddsUnweightedGan(DemParGan):
     """
     Specialized LAFTR for Equal Odds
     Like DemParGan, but adversarial gets to use the label Y as well
     """
 
-    def __init__(self, xdim, ydim, adim, zdim, hidden_layer_specs):
-        super(EqOddsUnweightedGan, self).__init__( xdim, ydim, adim, zdim, hidden_layer_specs)
+    def __init__(self, xdim, ydim, adim, zdim, hidden_layer_specs,
+                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF):
+        
+        super(EqOddsUnweightedGan, self).__init__( xdim, ydim, adim, zdim, hidden_layer_specs,
+                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF)
         
         self.adv = Adversarial(self.zdim + 1 * self.ydim, self.hidden_layer_specs, self.adim)
 
-    def __call__(self, X, Y, A):
-        
-        self.Z = self.enc(X) #computes the latent representation
-        self.Y_hat = self.clas(self.Z, Y) #pred Y
-        self.A_hat = self.adv(tf.concat(self.Z, Y)) #adversarial prediction for A
-        self.X_hat = self.dec(self.Z) #reconstructed X
-
-        self.class_loss = self.get_class_loss(self.Y_hat, Y)
-        self.recon_loss = self.get_recon_loss(self.X_hat, X)
-        self.aud_loss = self.get_aud_loss(self.A_hat, A)
-        self.loss = self.get_loss()
-        self.class_err = classification_error(Y, self.Y_hat)
-        self.aud_err = classification_error(A, self.A_hat)
-
-        return self.class_loss, self.recon_loss, self.aud_loss, self.loss, self.class_err, self.aud_err
+    def get_adv_input(self):
+        return tf.concat([self.Z, self.A], 1)
 
 class EqOppUnweightedGan(DemParGan):
     """
@@ -247,15 +289,74 @@ class EqOppUnweightedGan(DemParGan):
     Like DemParGan, but only using Y = 0 examples - this is handled in dataset!
     """
 
-    def __init__(self, xdim, ydim, adim, zdim, hidden_layer_specs):
-        super(EqOppUnweightedGan, self).__init__( xdim, ydim, adim, zdim, hidden_layer_specs)
+    def __init__(self, xdim, ydim, adim, zdim, hidden_layer_specs, 
+                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF):
+        super(EqOppUnweightedGan, self).__init__( xdim, ydim, adim, zdim, hidden_layer_specs,
+                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF)
 
     def get_loss(self):  # produce losses for the fairness task
-        loss = self.class_coeff*self.class_loss + self.recon_coeff*self.recon_loss - self.fair_coeff*self.aud_loss
+        loss = self.class_coeff*self.class_loss + self.recon_coeff*self.recon_loss - self.fair_coeff*self.adv_loss
         eqopp_class_loss = tf.multiply(1.  - self.Y, loss)
         return tf.reduce_mean(eqopp_class_loss)
 
-# model-specific utils
+##############################################################################################
+
+class UnfairMLP(tf.Module):
+    '''
+    Unfair Multi Layer Percepetron to have the baseline result
+    '''
+    def __init__(self, xdim, zdim, ydim, initializer = GlorotNormal):
+        super().__init__()
+
+        self.xdim = xdim
+        self.zdim = zdim #input dimension
+        self.hidden_layer = int(self.zdim/2)
+        self.ydim = ydim #output dimension
+        self.shapes = [self.xdim, self.zdim, self.hidden_layer, self.ydim]
+
+        self.ini = initializer()
+
+        self.is_built = False
+
+    def __call__(self, X, Y, hidden_activ_fn=tf.nn.relu):
+
+        #ensure casting
+        X = tf.dtypes.cast(X, tf.float32)
+        #Z = tf.dtypes.cast(Z, tf.float32)
+        Y = tf.dtypes.cast(Y, tf.float32)
+        
+        batch_size = X.shape[0]
+        if not self.is_built:
+            self.Ws = [tf.Variable(self.ini(shape=(self.shapes[i+1], self.shapes[i])), name='UnfMLP_Ws') 
+                                                                                for i in range(len(self.shapes)-1)]
+            self.bs = [tf.Variable(self.ini(shape=(batch_size, self.shapes[i+1])), name='UnfMLP_bs') 
+                                                                                for i in range(len(self.shapes)-1)]
+
+            self.is_built = True                                                                                
+
+        prev_layer = X
+
+        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[0])), self.bs[0])
+        layer = tf.nn.leaky_relu(layer) #encoder layer
+        
+        prev_layer = layer
+             
+        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[1])), self.bs[1])
+        layer = tf.nn.leaky_relu(layer) #hidden layer
+        
+        prev_layer = layer
+        
+        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[2])), self.bs[2]) #last layer
+
+        self.Y_hat = tf.nn.sigmoid(layer)
+        self.loss = self.get_class_loss(self.Y_hat, Y)
+        
+    def get_class_loss(self, Y_hat, Y):
+        return cross_entropy(Y, Y_hat)
+
+#########################################################################################
+
+'''model-specific utils'''
 def cross_entropy(target, pred, weights=None, eps=EPS):
     if weights == None:
         weights = tf.ones_like(pred)
