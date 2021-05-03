@@ -3,13 +3,16 @@ from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.initializers import GlorotNormal
 from math import isnan
 
+EPS = 7e-8
+
 class Adversarial():
     def __init__(self, initializer = GlorotNormal):
         
         self.ini = initializer()
-        #self.U = tf.Variable(1.) #only to initialize
-        self.U = tf.Variable(self.ini(shape=(1, 3)), name='U')
+        self.U = tf.Variable(1., name='U') #only to initialize
+        #self.U = tf.Variable(self.ini(shape=(1, 3)), name='U')
         self.is_built = False
+        self.c = tf.Variable(self.ini(shape=(1,1)), name='c')
 
     def __call__(self):
         pass
@@ -23,16 +26,7 @@ class Adversarial():
 
 class AdversarialDemPar(Adversarial):
     def __init__(self):
-        pass
-
-    def __call__(self, Y, Y_hat):
-        pass
-
-class AdversarialEqOdds(Adversarial):
-    def __init__(self):
         super(AdversarialEqOdds, self).__init__()
-
-        self.c = tf.Variable(self.ini(shape=(1,1)), name='c')
 
     def __call__(self, Y, Y_hat, b):
         
@@ -40,17 +34,42 @@ class AdversarialEqOdds(Adversarial):
             
         self.S = tf.math.sigmoid(
                         tf.multiply(
-                            (1+tf.math.abs(self.c)), Y_hat#logit(Y_hat)
+                            (1+tf.math.abs(self.c)), logit(Y_hat-EPS) #here we add EPS to ensure we wont get a NaN
+                        ))
+
+        if not self.is_built:
+            U_shape = (1, self.S.shape[1])
+            self.U = self.build(U_shape)
+            #print(self.U)
+            self.is_built = True #check how to improve this build of U
+
+        self.A_hat = tf.math.sigmoid(
+                        tf.add(
+                            tf.matmul(self.S, tf.transpose(self.U)), 
+                            b))
+
+        return self.A_hat
+
+class AdversarialEqOdds(Adversarial):
+    def __init__(self):
+        super(AdversarialEqOdds, self).__init__()
+
+    def __call__(self, Y, Y_hat, b):
+        
+        self.S = tf.math.sigmoid(
+                        tf.multiply(
+                            (1+tf.math.abs(self.c)), logit(Y_hat-EPS) #here we add EPS to ensure we wont get a NaN
                         ))
 
         concatenation = tf.concat(
                     [self.S, tf.multiply(self.S, Y), tf.multiply(self.S, 1-Y)], axis=1
                 )
 
-        '''if not self.is_built:
+        if not self.is_built:
             U_shape = (1, concatenation.shape[1])
             self.U = self.build(U_shape)
-            self.is_built = True''' #check how to improve this build of U
+            #print(self.U)
+            self.is_built = True #check how to improve this build of U - getting a warning
 
         self.A_hat = tf.math.sigmoid(
                         tf.add(
@@ -59,12 +78,11 @@ class AdversarialEqOdds(Adversarial):
 
         return self.A_hat
 
-class AdversarialEqOpp(Adversarial):
+class AdversarialEqOpp(AdversarialEqOdds):
     def __init__(self):
-        pass
+        super(AdversarialEqOpp, self).__init__()
 
-    def __call__(self, Y, Y_hat):
-        pass
+##########################################################################################################################
 
 class Classifier():
     def __init__(self, xdim, initializer = GlorotNormal):
@@ -81,7 +99,9 @@ class Classifier():
 
     def get_loss(self, Y, Y_hat):
         bce = BinaryCrossentropy(from_logits=True)
-        return bce(Y, Y_hat+1e-8)
+        return bce(Y, Y_hat)
+
+##########################################################################################################################
 
 class FairLogisticRegression():
     def __init__(self, xdim, batch_size, fairdef='EqOdds', initializer = GlorotNormal):
@@ -123,4 +143,6 @@ class FairLogisticRegression():
 ########################################################################
 
 def logit(t):
-    return tf.subtract(tf.math.log(t), tf.math.log(1-t)) #U are the problem
+    t = tf.math.abs(t)
+    return tf.subtract(tf.math.log(t), tf.math.log(1-t))
+
