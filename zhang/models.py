@@ -24,6 +24,7 @@ class Adversarial():
         bce = BinaryCrossentropy(from_logits=True)
         return bce(A, A_hat)
 
+    '''
     def get_filtered_inputs(self, W, Y, Y_hat, A):
         col = tf.TensorShape([1])
         lines = None
@@ -31,11 +32,11 @@ class Adversarial():
         
         mask = tf.math.equal(Y, 1.)
 
-        '''W_filtered = tf.Variable(W[mask])
-        lines = W_filtered.shape
-        shape = col.concatenate(lines)
-        W_filtered = tf.reshape(W_filtered, shape)
-        print('W_fil ', W_filtered.shape)'''
+        #W_filtered = tf.Variable(W[mask])
+        #lines = W_filtered.shape
+        #shape = col.concatenate(lines)
+        #W_filtered = tf.reshape(W_filtered, shape)
+        #print('W_fil ', W_filtered.shape)
 
         Y_filtered = tf.Variable(Y[mask])
         lines = Y_filtered.shape
@@ -53,6 +54,7 @@ class Adversarial():
         A_filtered = tf.reshape(A_filtered, shape)
 
         return Y_filtered, Y_hat_filtered, A_filtered#, W_filtered
+        '''
 
 class AdversarialDemPar(Adversarial):
     def __init__(self):
@@ -112,6 +114,10 @@ class AdversarialEqOpp(AdversarialEqOdds):
     def __init__(self):
         super(AdversarialEqOpp, self).__init__()
 
+    def filter_As(self, A, A_hat, Y):
+        pass
+        
+
 ##########################################################################################################################
 
 class Classifier():
@@ -157,20 +163,38 @@ class FairLogisticRegression():
 
         self.Y_hat = self.clas(self.X, self.b)
 
-        '''if self.fairdef == 'EqOpp': #trying the filter
-            #Y_filtered, Y_hat_filtered, A_filtered, self.W_filtered = self.adv.get_filtered_inputs(self.clas.W, self.Y, self.Y_hat, self.A)
-            Y_filtered, Y_hat_filtered, A_filtered = self.adv.get_filtered_inputs(self.clas.W,
-                                                                        self.Y, self.Y_hat, self.A)                                                    
+        if self.fairdef == 'EqOpp': #trying the filter
+            '''
+            Y_filtered, Y_hat_filtered, A_filtered = self.adv.get_filtered_inputs(self.clas.W, self.Y, self.Y_hat, self.A)                                                    
             self.A_hat = self.adv(Y_filtered, Y_hat_filtered, self.b)
             print(self.A_hat.shape, A_filtered.shape, Y_filtered.shape, Y_hat_filtered.shape)
             self.adv_loss = self.adv.get_loss(A_filtered, self.A_hat)
+            '''
+            
+            self.A_hat = self.adv(self.Y, self.Y_hat, self.b)
+
+            mask = tf.math.equal(self.Y, 1.) #to consider only where Y = 1
+            col = tf.TensorShape([1])
+            lines = None
+            shape = None
+            A_filtered = tf.Variable(self.A[mask])
+            lines = A_filtered.shape
+            shape = lines.concatenate(col)
+            A_filtered = tf.reshape(A_filtered, shape)
+            A_hat_filtered = tf.Variable(self.A_hat[mask])
+            lines = A_hat_filtered.shape
+            shape = lines.concatenate(col)
+            A_hat_filtered = tf.reshape(A_hat_filtered, shape)
+            #self.adv_loss = self.adv.get_loss(A_filtered, A_hat_filtered)
+            self.adv_loss = self.adv.get_loss(tf.math.multiply(self.Y, self.A), tf.math.multiply(self.Y, self.A_hat))
+            
 
         else:
             self.A_hat = self.adv(self.Y, self.Y_hat, self.b)
-            self.adv_loss = self.adv.get_loss(self.A, self.A_hat)'''
+            self.adv_loss = self.adv.get_loss(self.A, self.A_hat)
         
-        self.A_hat = self.adv(self.Y, self.Y_hat, self.b)
-        self.adv_loss = self.adv.get_loss(self.A, self.A_hat)
+        #self.A_hat = self.adv(self.Y, self.Y_hat, self.b)
+        #self.adv_loss = self.adv.get_loss(self.A, self.A_hat)
         
         self.clas_loss = self.clas.get_loss(self.Y, self.Y_hat)
         self.model_loss = self.clas_loss-self.adv_loss

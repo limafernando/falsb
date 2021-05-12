@@ -296,7 +296,8 @@ class EqOppUnweightedGan(DemParGan):
 
     def get_loss(self):  # produce losses for the fairness task
         loss = self.class_coeff*self.class_loss + self.recon_coeff*self.recon_loss - self.fair_coeff*self.adv_loss
-        eqopp_class_loss = tf.multiply(1.  - self.Y, loss)
+        #eqopp_class_loss = tf.multiply(1. - self.Y, loss) #should multiply for self.Y because we want the examples where we have the positive outcome, i.e., Y=1
+        eqopp_class_loss = tf.multiply(self.Y, loss)
         return tf.reduce_mean(eqopp_class_loss)
 
 ##############################################################################################
