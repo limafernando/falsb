@@ -152,7 +152,7 @@ class FairLogisticRegression():
         self.adv = adv() #initializing the adversarial object
 
         #self.b = tf.Variable(self.ini(shape=(self.batch_size, 1)), name='b')
-        self.b = tf.Variable(tf.zeros([1]), name='b')
+        self.b = tf.Variable(tf.zeros([1,1]), name='b')
 
     def __call__(self, X, Y, A):
 
