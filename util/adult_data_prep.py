@@ -1,21 +1,26 @@
 import numpy as np
 from pathlib import Path
 from sys import exit
+from data_prep_func import *
 
 def main():    
     data_folder = Path(r'/home/luiz/ufpb/mestrado/code/falsb/data/adult')
     
-    unprep_train = data_folder/'adult.data'
+    raw_train = data_folder/'adult.data'
     unprep_test = data_folder/'adult.test'
+    unprep_train = data_folder/'adult_train.csv'
+    unprep_valid = data_folder/'adult_valid.csv'
 
     #prep_train = data_folder/r'post_prep/adult.train'
     #prep_test = data_folder/r'post_prep/adult.test'
 
     #headers_file = data_folder/r'post_prep/adult.headers'
 
-    data_npz = data_folder/r'post_prep/adult.npz'
+    prep_train = data_folder/r'post_prep/adult_train.csv'
+    prep_valid = data_folder/r'post_prep/adult_valid.csv'
+    prep_test = data_folder/r'post_prep/adult_test.csv'
     headers_file = data_folder/r'post_prep/adult.headers'
-    data_csv = data_folder/r'post_prep/adult.csv'
+    #data_csv = data_folder/r'post_prep/adult.csv'
 
     #header_list = open(headers_file, 'w')
 
@@ -49,7 +54,7 @@ def main():
         'income': ' <=50K,>50K'
     }
 
-    options = {k: [s.strip() for s in sorted(options[k].split(','))] for k in options}
+    options = {k: [s.strip() for s in sorted(options[k].split(','))] for k in options} #dict values are now sorted lists
 
     buckets = {'age': [18, 25, 30, 35, 40 ,45, 50, 55, 60, 65]}
 
@@ -71,13 +76,18 @@ def main():
         'income': lambda x: categorical2numerical(x.strip('.'), options['income']) #strip is needed for test data -> rows ended with '.'
     }
 
-    dataset = {}
-    for phase_file, phase in [(unprep_train, 'training'), (unprep_test, 'test')]:
-        unprep_data = [s.strip().split(',') for s in open(phase_file, 'r').readlines()]
+    #start the parse process
 
-        X = []
-        Y = []
-        A = []
+    unprep_valid_data, unprep_train_data = set_train_val_split(raw_train)
+    save_unprep_data(unprep_valid, unprep_valid_data)
+    save_unprep_data(unprep_train, unprep_train_data)
+
+    dataset = {}
+    for phase_file, phase in [(unprep_train, 'training'), (unprep_test, 'test'), (unprep_valid, 'validation')]:
+        
+        unprep_data = [s.strip().split(',') for s in open(phase_file, 'r').readlines()] #s contains the file readlines list
+
+        prep_data = []
         print(phase)
 
         for line in unprep_data:
@@ -86,59 +96,32 @@ def main():
                 continue
             if row in ([''], ['|1x3 Cross validator']):
                 continue
-            newrow, label, sens_att = parse_row(row, headers, headers_used, header_prepfunc_map, sensitive, target)
-            X.append(newrow)
-            Y.append(label)
-            A.append(sens_att)
+            if row == ['""']:
+                continue
 
-        npX = np.array(X)
-        npY = np.array(Y)
-        npY = npY[:, np.newaxis]
-        npA = np.array(A)
-        npA = npA[:, np.newaxis]
+            newrow = parse_row(row, headers, headers_used, header_prepfunc_map, sensitive, target)
+            prep_data.append(newrow)
+            #X.append(newrow)
+            #Y.append(label)
+            #A.append(sens_att)
+
         #print(Y)
-        #print(npY)
-        
-        print(npX.shape, npY.shape, npA.shape)
 
-        dataset[phase] = {}
-        dataset[phase]['X'] = npX
-        dataset[phase]['Y'] = npY
-        dataset[phase]['A'] = npA
-        #print(dataset['training'])
+        dataset[phase] = prep_data
 
-        valid_asserts(npX, npY, npA, phase)
+    
 
     #should write headers file
-    headers_list = open(headers_file, 'w')
-    i = 0
-    for h in headers_used:
-        if options[h] == 'continuous':
-            headers_list.write('{:d},{}\n'.format(i, h))
-            i += 1
-        elif options[h][0] == 'buckets':
-            for b in buckets[h]:
-                colname = '{}_{:d}'.format(h, b)
-                headers_list.write('{:d},{}\n'.format(i, colname))
-                i += 1
-        else:
-            for opt in options[h]:
-                colname = '{}_{}'.format(h, opt)
-                headers_list.write('{:d},{}\n'.format(i, colname))
-                i += 1
+    save_headers(headers_used+[sensitive]+[target], options, buckets, headers_file)
+    files_dict = {'training':prep_train, 'validation':prep_valid, 'test':prep_test}
+    success = save_data(files_dict, dataset)
 
-    valid_idxs, train_idxs = set_train_val_idxs(dataset)
-    #dataset['valid'], dataset['train'] = make_valid_set(valid_idxs, dataset['train'])
-    '''
-    fazer csv?
-    '''
+    if success:
+        print('Successfully prepared data!')
+    else:
+        print('Check if data was right prepared!')
 
-    np.savez(data_npz, x_train=dataset['training']['X'], x_test=dataset['test']['X'],
-                y_train=dataset['training']['Y'], y_test=dataset['test']['Y'],
-                a_train=dataset['training']['A'], a_test=dataset['test']['A'],
-                train_idxs=train_idxs, valid_idxs=valid_idxs)
-
-    print('Successfully prepared data!')
+#########################################################################################################
 
 def check_already_prep(headers_file):
     #train_file = open(prep_train)
@@ -146,90 +129,38 @@ def check_already_prep(headers_file):
     headers_list = open(headers_file)
     return headers_list.readline()
 
-def parse_row(row, headers, headers_used, hpm, sensitive, target):
+def parse_row(row, headers, headers_used, header_prepfunc_map, sensitive, target):
     new_row_dict = {}
     for i in range(len(row)):
         x = row[i]
         header = headers[i]
-        new_row_dict[header] = hpm[header](x)
+        new_row_dict[header] = header_prepfunc_map[header](x)
+
     sens_att = new_row_dict[sensitive]
     label = new_row_dict[target]
+    
     new_row = []
     for h in headers_used:
         new_row = new_row + new_row_dict[h]
-    return new_row, label, sens_att
+    #return new_row, label, sens_att
+    return new_row+[sens_att]+[label]
 
-def valid_asserts(npX, npY, npA, phase):
+def valid_asserts(data, phase):
     if phase == 'training':
         try:
-            assert npX.shape == (30162, 112)
-            assert npY.shape == (30162, 1)
-            assert npA.shape == (30162, 1)
+            assert data.shape == (30162, 114)
         except AssertionError:
             print('Something went wrong with our training data shape!')
             exit('Exit running... Check your data shape!')
 
     if phase == 'test':
         try:
-            assert npX.shape == (15060, 112)
-            assert npY.shape == (15060, 1)
-            assert npA.shape == (15060, 1)
+            assert data.shape == (15060, 114)
         except AssertionError:
             print('Something went wrong with our test data shape!')
             exit('Exit running... Check your data shape!')
 
-def bucket(x, buckets):
-    x = float(x)
-    n = len(buckets)
-    label = n
-    for i in range(n):
-        if x <= buckets[i]:
-            label = i
-            break
-    template = [0. for j in range(n + 1)]
-    template[label] = 1.
-    return template
-
-def onehot(x, choices):
-    if not x in choices:
-        print('could not find "{}" in choices'.format(x))
-        print(choices)
-        raise Exception()
-    label = choices.index(x)
-    template = [0. for j in range(len(choices))]
-    template[label] = 1.
-    return template
-
-def categorical2numerical(x, choices):
-    label = choices.index(x)
-    return label
-
-def continuous(x):
-    return [float(x)]
-
-def normalization(dataset):
-    mean = np.mean(dataset['training']['X'], axis=0)
-    std = np.std(dataset['training']['X'], axis=0)
-    print(mean, std)
-    dataset['training']['X'] = whiten(dataset['training']['X'], mean, std)
-    dataset['test']['X'] = whiten(dataset['test']['X'], mean, std)
-
-def whiten(X, mean, std):
-    EPS = 1e-8
-    meantile = np.tile(mean, (X.shape[0], 1))
-    stdtile = np.maximum(np.tile(std, (X.shape[0], 1)), EPS)
-    X = X - meantile
-    X = np.divide(X, stdtile)
-    return X
-
-def set_train_val_idxs(dataset):
-    train_x = dataset['training']['X'].shape[0]
-    shuf = np.random.permutation(train_x)
-    valid_pct = 0.2
-    valid_ct = int(train_x * valid_pct)
-    valid_idxs = shuf[:valid_ct]
-    train_idxs = shuf[valid_ct:]
-    return valid_idxs, train_idxs
+#################################################################################################################
 
 if __name__ == "__main__":
     '''
