@@ -3,7 +3,7 @@ from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.initializers import GlorotNormal
 
 EPS = 1e-8
-CLASS_COEFF = 1.
+CLAS_COEFF = 1.
 FAIR_COEFF = 1.
 RECON_COEFF = 0.
 
@@ -48,10 +48,10 @@ class UnfairClassifier(tf.Module):
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[1])), self.bs[1]) #last layer
 
         self.Y_hat = tf.nn.sigmoid(layer)
-        self.loss = self.get_class_loss(self.Y_hat, Y)
+        self.loss = self.get_clas_loss(self.Y_hat, Y)
         
         
-    def get_class_loss(self, Y_hat, Y):
+    def get_clas_loss(self, Y_hat, Y):
         return cross_entropy(Y, Y_hat)
 
 ######################################################################################################
@@ -207,7 +207,7 @@ class DemParGan(tf.Module):
     """
 
     def __init__(self, xdim, ydim, adim, zdim, hidden_layer_specs,
-                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF):
+                                    recon_coeff=RECON_COEFF, clas_coeff=CLAS_COEFF, fair_coeff=FAIR_COEFF):
         super().__init__()
 
         self.xdim = xdim #input dimensions
@@ -217,7 +217,7 @@ class DemParGan(tf.Module):
         self.hidden_layer_specs = hidden_layer_specs
 
         self.recon_coeff = recon_coeff
-        self.class_coeff = class_coeff
+        self.clas_coeff = clas_coeff
         self.fair_coeff = fair_coeff
 
         self.enc = Encoder(self.xdim, self.hidden_layer_specs, self.zdim)
@@ -237,17 +237,17 @@ class DemParGan(tf.Module):
         self.A_hat = self.adv(self.get_adv_input()) #adversarial prediction for A
         self.X_hat = self.dec(tf.concat([self.Z, self.A], 1)) #reconstructed X
         
-        self.class_loss = self.get_class_loss(self.Y_hat, self.Y)
+        self.clas_loss = self.get_clas_loss(self.Y_hat, self.Y)
         self.recon_loss = self.get_recon_loss(self.X_hat, self.X)
         self.adv_loss = self.get_advers_loss(self.A_hat, self.A)
         self.loss = self.get_loss()
-        self.class_err = classification_error(self.Y, self.Y_hat)
+        self.clas_err = classification_error(self.Y, self.Y_hat)
         self.adv_err = classification_error(self.A, self.A_hat)
 
         return (self.Z, self.Y_hat, self.A_hat, self.X_hat, 
-                self.class_loss, self.recon_loss, self.adv_loss, self.loss, self.class_err, self.adv_err)
+                self.clas_loss, self.recon_loss, self.adv_loss, self.loss, self.clas_err, self.adv_err)
         
-    def get_class_loss(self, Y_hat, Y):
+    def get_clas_loss(self, Y_hat, Y):
         return cross_entropy(Y, Y_hat)
 
     def get_recon_loss(self, X_hat, X):
@@ -258,7 +258,7 @@ class DemParGan(tf.Module):
 
     def get_loss(self):  # produce losses for the fairness task
         return tf.reduce_mean([
-            self.class_coeff*self.class_loss,
+            self.clas_coeff*self.clas_loss,
             self.recon_coeff*self.recon_loss,
             -self.fair_coeff*self.adv_loss
         ])
@@ -273,10 +273,10 @@ class EqOddsUnweightedGan(DemParGan):
     """
 
     def __init__(self, xdim, ydim, adim, zdim, hidden_layer_specs,
-                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF):
+                                    recon_coeff=RECON_COEFF, clas_coeff=CLAS_COEFF, fair_coeff=FAIR_COEFF):
         
         super(EqOddsUnweightedGan, self).__init__( xdim, ydim, adim, zdim, hidden_layer_specs,
-                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF)
+                                    recon_coeff=RECON_COEFF, clas_coeff=CLAS_COEFF, fair_coeff=FAIR_COEFF)
         
         self.adv = Adversarial(self.zdim + 1 * self.ydim, self.hidden_layer_specs, self.adim)
 
@@ -290,15 +290,15 @@ class EqOppUnweightedGan(DemParGan):
     """
 
     def __init__(self, xdim, ydim, adim, zdim, hidden_layer_specs, 
-                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF):
+                                    recon_coeff=RECON_COEFF, clas_coeff=CLAS_COEFF, fair_coeff=FAIR_COEFF):
         super(EqOppUnweightedGan, self).__init__( xdim, ydim, adim, zdim, hidden_layer_specs,
-                                    recon_coeff=RECON_COEFF, class_coeff=CLASS_COEFF, fair_coeff=FAIR_COEFF)
+                                    recon_coeff=RECON_COEFF, clas_coeff=CLAS_COEFF, fair_coeff=FAIR_COEFF)
 
     def get_loss(self):  # produce losses for the fairness task
-        loss = self.class_coeff*self.class_loss + self.recon_coeff*self.recon_loss - self.fair_coeff*self.adv_loss
-        #eqopp_class_loss = tf.multiply(1. - self.Y, loss) #should multiply for self.Y because we want the examples where we have the positive outcome, i.e., Y=1
-        eqopp_class_loss = tf.multiply(self.Y, loss)
-        return tf.reduce_mean(eqopp_class_loss)
+        loss = self.clas_coeff*self.clas_loss + self.recon_coeff*self.recon_loss - self.fair_coeff*self.adv_loss
+        #eqopp_clas_loss = tf.multiply(1. - self.Y, loss) #should multiply for self.Y because we want the examples where we have the positive outcome, i.e., Y=1
+        eqopp_clas_loss = tf.multiply(self.Y, loss)
+        return tf.reduce_mean(eqopp_clas_loss)
 
 ##############################################################################################
 
@@ -350,9 +350,9 @@ class UnfairMLP(tf.Module):
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[2])), self.bs[2]) #last layer
 
         self.Y_hat = tf.nn.sigmoid(layer)
-        self.loss = self.get_class_loss(self.Y_hat, Y)
+        self.loss = self.get_clas_loss(self.Y_hat, Y)
         
-    def get_class_loss(self, Y_hat, Y):
+    def get_clas_loss(self, Y_hat, Y):
         return cross_entropy(Y, Y_hat)
 
 #########################################################################################
