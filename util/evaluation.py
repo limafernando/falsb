@@ -3,7 +3,7 @@ import numpy as np
 
 from util import metrics
 
-def validation(model, valid_data):
+def evaluation(model, valid_data):
     Y_hat = None
     A_hat = None
     batch_count = 1
@@ -33,11 +33,11 @@ def compute_metrics(Y, Y_hat, A, A_hat):
     print("> {} | {}".format(clas_acc, adv_acc))
 
     dp = metrics.DP(Y_hat.numpy(), A)
-    di = metrics.DI(Y, Y_hat.numpy(), A)
-    deopp = metrics.DI_soft(Y, Y_hat.numpy(), A)
+    deqodds = metrics.DEqOdds(Y, Y_hat.numpy(), A)
+    deqopp = metrics.DEqOpp(Y, Y_hat.numpy(), A)
 
-    print("> DP | DI | DEOPP")
-    print("> {} | {} | {}".format(dp, di, deopp))
+    print("> DP | DEqOdds | DEqOpp")
+    print("> {} | {} | {}".format(dp, deqodds, deqopp))
 
     tp = metrics.TP(Y, Y_hat.numpy())
     tn = metrics.TN(Y, Y_hat.numpy())
@@ -66,4 +66,8 @@ def compute_metrics(Y, Y_hat, A, A_hat):
     confusion_matrix = np.array([[tn, fp],
                                 [fn, tp]])
 
-    return clas_acc, dp, di, deopp, confusion_matrix
+    return clas_acc, dp, deqodds, deqopp, confusion_matrix
+
+def compute_tradeoff(performance_metric, fairness_metric):
+    tradeoff = 2*(performance_metric*fairness_metric)/(performance_metric+fairness_metric)
+    return tradeoff

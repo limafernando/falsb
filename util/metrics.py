@@ -154,21 +154,21 @@ def DI(Y, Ypred, A):
     #print('call di')
     return (DI_FN(Y, Ypred, A) + DI_FP(Y, Ypred, A)) * 0.5
 '''
-def DI(Y, Ypred, A): #deltaEOdds
+def DEqOdds(Y, Ypred, A): #deltaEOdds
     #print('call di')
-    return (DI_TP(Y, Ypred, A) + DI_FP(Y, Ypred, A)) * 0.5
+    return 1 - ((DI_TP(Y, Ypred, A) + DI_FP(Y, Ypred, A)) * 0.5)
 
 ''' CONSIDER THE TRUE POSITIVE FOR BOTH GROUPS
 def DI_soft(Y, Ypred, A): #deltaEOpp
     return (DI_FN_soft(Y, Ypred, A) + DI_FP_soft(Y, Ypred, A)) * 0.5'''
 
-def DI_soft(Y, Ypred, A): #deltaEOpp
+def DEqOpp(Y, Ypred, A): #deltaEOpp
     tpr1 = subgroup(TPR, A, Y, Ypred)
     tpr0 = subgroup(TPR, 1 - A, Y, Ypred)
-    return abs(tpr1 - tpr0)*0.5
+    return 1 - (abs(tpr1 - tpr0)*0.5)
 
 def DP(Ypred, A): #deltaDP
-    return abs(subgroup(PR, A, Ypred) - subgroup(PR, 1 - A, Ypred))
+    return 1 - (abs(subgroup(PR, A, Ypred) - subgroup(PR, 1 - A, Ypred)))
 
 def NLL(Y, Ypred, eps=eps):
     return -np.mean(np.multiply(Y, np.log(Ypred + eps)) + np.multiply(1. - Y, np.log(1 - Ypred + eps)))
