@@ -51,7 +51,7 @@ def compute_metrics(Y, Y_hat, A, A_hat):
     m = [metrics.TN, metrics.FP, metrics.FN, metrics.TP]
     metrics_a0 = [0, 0, 0, 0]
     metrics_a1 = [0, 0, 0, 0]
-    for i in range(len(metrics_a0)):
+    for i in range(len(m)):
         metrics_a0[i] = metrics.subgroup(m[i], A, Y, Y_hat.numpy())
         metrics_a1[i] = metrics.subgroup(m[i], 1 - A, Y, Y_hat.numpy())
 
@@ -66,7 +66,7 @@ def compute_metrics(Y, Y_hat, A, A_hat):
     confusion_matrix = np.array([[tn, fp],
                                 [fn, tp]])
 
-    return clas_acc, dp, deqodds, deqopp, confusion_matrix
+    return clas_acc, dp, deqodds, deqopp, confusion_matrix, metrics_a0, metrics_a1
 
 def compute_tradeoff(performance_metric, fairness_metric):
     tradeoff = 2*(performance_metric*fairness_metric)/(performance_metric+fairness_metric)
