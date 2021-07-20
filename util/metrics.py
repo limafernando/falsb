@@ -67,11 +67,7 @@ def FN_soft(Y, Ypred):
 
 #note: TPR + FNR = 1; TNR + FPR = 1
 def TPR(Y, Ypred): #TP rate
-    posY = pos(Y)
-    if posY == 0:
-        return 0
-    else:
-        return TP(Y, Ypred) / posY
+    return 1-FNR(Y, Ypred)
 
 def FPR(Y, Ypred): #FP rate
     negY = neg(Y)
@@ -165,7 +161,7 @@ def DI_soft(Y, Ypred, A): #deltaEOpp
 def DEqOpp(Y, Ypred, A): #deltaEOpp
     tpr1 = subgroup(TPR, A, Y, Ypred)
     tpr0 = subgroup(TPR, 1 - A, Y, Ypred)
-    return 1 - (abs(tpr1 - tpr0)*0.5)
+    return 1 - (abs(tpr1 - tpr0))
 
 def DP(Ypred, A): #deltaDP
     return 1 - (abs(subgroup(PR, A, Ypred) - subgroup(PR, 1 - A, Ypred)))
