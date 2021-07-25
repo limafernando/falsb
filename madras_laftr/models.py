@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.losses import categorical_crossentropy
-from tensorflow.keras.initializers import GlorotNormal
+from tensorflow.keras.initializers import GlorotNormal, Zeros, Ones
+from tensorflow.keras.losses import BinaryCrossentropy
 
 EPS = 1e-8
 CLAS_COEFF = 1.
@@ -66,6 +67,8 @@ class Encoder(tf.Module):
         self.shapes = [self.xdim] + self.hidden_layer_specs + [self.zdim]
 
         self.ini = initializer()
+        self.zeros = Zeros()
+        self.ones = Ones()
 
         self.is_built = False
 
@@ -73,9 +76,9 @@ class Encoder(tf.Module):
         
         batch_size = X.shape[0]
         if not self.is_built:
-            self.Ws = [tf.Variable(self.ini(shape=(self.shapes[i+1], self.shapes[i])), name='Enc_Ws') 
+            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='Enc_Ws') 
                                                                                 for i in range(len(self.shapes)-1)]
-            self.bs = [tf.Variable(self.ini(shape=(batch_size, self.shapes[i+1])), name='Enc_bs') 
+            self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='Enc_bs') 
                                                                                 for i in range(len(self.shapes)-1)]
 
             self.is_built = True                                                                                
@@ -102,6 +105,8 @@ class Decoder(tf.Module):
         self.shapes = [self.z_a_dim] + self.hidden_layer_specs + [self.xdim]
 
         self.ini = initializer()
+        self.zeros = Zeros()
+        self.ones = Ones()
 
         self.is_built = False
 
@@ -110,9 +115,9 @@ class Decoder(tf.Module):
         batch_size = Z_A.shape[0]
         
         if not self.is_built:
-            self.Ws = [tf.Variable(self.ini(shape=(self.shapes[i+1], self.shapes[i])), name='Dec_Ws') 
+            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='Dec_Ws') 
                                                                                 for i in range(len(self.shapes)-1)]
-            self.bs = [tf.Variable(self.ini(shape=(batch_size, self.shapes[i+1])), name='Dec_bs') 
+            self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='Dec_bs') 
                                                                                 for i in range(len(self.shapes)-1)]                                                                                
 
             self.is_built = True
@@ -139,6 +144,8 @@ class Classifier(tf.Module):
         self.shapes = [self.zdim] + self.hidden_layer_specs + [self.ydim]
 
         self.ini = initializer()
+        self.zeros = Zeros()
+        self.ones = Ones()
 
         self.is_built = False
 
@@ -146,9 +153,9 @@ class Classifier(tf.Module):
         
         batch_size = Z.shape[0]
         if not self.is_built:
-            self.Ws = [tf.Variable(self.ini(shape=(self.shapes[i+1], self.shapes[i])), name='Clas_Ws') 
+            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='Clas_Ws') 
                                                                                 for i in range(len(self.shapes)-1)]
-            self.bs = [tf.Variable(self.ini(shape=(batch_size, self.shapes[i+1])), name='Clas_bs') 
+            self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='Clas_bs') 
                                                                                 for i in range(len(self.shapes)-1)]
 
             self.is_built = True                                                                                
@@ -177,14 +184,16 @@ class Adversarial(tf.Module):
         self.is_built = False
 
         self.ini = initializer()
+        self.zeros = Zeros()
+        self.ones = Ones()
 
     def __call__(self, Z, hidden_activ_fn=tf.nn.relu, out_activ_fn=tf.nn.sigmoid):
         
         batch_size = Z.shape[0]
         if not self.is_built:
-            self.Ws = [tf.Variable(self.ini(shape=(self.shapes[i+1], self.shapes[i])), name='Adv_Ws') 
+            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='Adv_Ws') 
                                                                                 for i in range(len(self.shapes)-1)]
-            self.bs = [tf.Variable(self.ini(shape=(batch_size, self.shapes[i+1])), name='Adv_bs') 
+            self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='Adv_bs') 
                                                                                 for i in range(len(self.shapes)-1)]
 
             self.is_built = True                                                                                
@@ -310,16 +319,27 @@ class UnfairMLP(tf.Module):
         super().__init__()
 
         self.xdim = xdim
-        self.zdim = zdim #input dimension
-        self.hidden_layer = int(self.zdim/2)
+        self.hidden_layer = int(self.xdim/2)
+        self.hidden_layer2 = int(self.hidden_layer/3)
         self.ydim = ydim #output dimension
-        self.shapes = [self.xdim, self.zdim, self.hidden_layer, self.ydim]
+        self.shapes = [self.xdim, self.hidden_layer, self.hidden_layer2, self.ydim]
+
+        '''self.xdim = xdim
+        self.hidden_layer1 = int(self.xdim/2)
+        self.hidden_layer2 = int(self.hidden_layer1/2)
+        self.zdim = zdim
+        self.hidden_layer3 = int(self.zdim/2)
+        self.hidden_layer4 = int(self.hidden_layer3/2)
+        self.ydim = ydim #output dimension
+        self.shapes = [self.xdim, self.hidden_layer1, self.hidden_layer2, self.zdim, self.hidden_layer3, self.hidden_layer4, self.ydim]'''
 
         self.ini = initializer()
+        self.zeros = Zeros()
+        self.ones = Ones()
 
         self.is_built = False
 
-    def __call__(self, X, Y, hidden_activ_fn=tf.nn.relu):
+    def __call__(self, X, Y, hidden_activ_fn=tf.nn.relu, training=False):
 
         #ensure casting
         X = tf.dtypes.cast(X, tf.float32)
@@ -328,26 +348,42 @@ class UnfairMLP(tf.Module):
         
         batch_size = X.shape[0]
         if not self.is_built:
-            self.Ws = [tf.Variable(self.ini(shape=(self.shapes[i+1], self.shapes[i])), name='UnfMLP_Ws') 
+            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='UnfMLP_Ws') 
                                                                                 for i in range(len(self.shapes)-1)]
-            self.bs = [tf.Variable(self.ini(shape=(batch_size, self.shapes[i+1])), name='UnfMLP_bs') 
+            self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='UnfMLP_bs') 
                                                                                 for i in range(len(self.shapes)-1)]
 
             self.is_built = True                                                                                
 
         prev_layer = X
 
-        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[0])), self.bs[0])
+        for i in range(len(self.shapes)-2):
+            layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[i])), self.bs[i])
+            layer = tf.nn.leaky_relu(layer)
+            prev_layer = layer
+            '''if training:
+                layer = tf.nn.dropout(prev_layer, rate = 0.2, seed = 1)
+                prev_layer = layer'''
+
+        '''layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[0])), self.bs[0])
+        layer = tf.nn.leaky_relu(layer) #encoder layer
+        
+        prev_layer = layer
+
+        #layer = tf.nn.dropout(prev_layer, rate = 0.5, seed = 1)
+        #prev_layer = layer
+
+        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[1])), self.bs[1])
         layer = tf.nn.leaky_relu(layer) #encoder layer
         
         prev_layer = layer
              
-        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[1])), self.bs[1])
+        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[2])), self.bs[2])
         layer = tf.nn.leaky_relu(layer) #hidden layer
         
-        prev_layer = layer
+        prev_layer = layer'''
         
-        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[2])), self.bs[2]) #last layer
+        layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
         self.Y_hat = tf.nn.sigmoid(layer)
         self.loss = self.get_clas_loss(self.Y_hat, Y)
@@ -361,7 +397,11 @@ class UnfairMLP(tf.Module):
 def cross_entropy(target, pred, weights=None, eps=EPS):
     if weights == None:
         weights = tf.ones_like(pred)
-    return -tf.squeeze(tf.multiply(weights, tf.multiply(target, tf.math.log(pred + eps)) + tf.multiply(1 - target, tf.math.log(1 - pred + eps))))
+    return -tf.squeeze(
+            tf.multiply(weights, 
+                tf.multiply(target, tf.math.log(pred + eps)) + tf.multiply(1 - target, tf.math.log(1 - pred + eps))))
+    '''bce = BinaryCrossentropy(from_logits=True)
+    return bce(target, pred)'''
 
 
 def classification_error(target, pred):

@@ -62,8 +62,8 @@ class Adversarial():
 class AdversarialDemPar(Adversarial):
     def __init__(self):
         super(AdversarialDemPar, self).__init__()
-        self.U = tf.Variable(self.ini(shape=(1, 1)), name='U')
-        #self.U = tf.Variable(tf.zeros([1, 1]), name='U')
+        #self.U = tf.Variable(self.ini(shape=(1, 1)), name='U')
+        self.U = tf.Variable(tf.zeros([1, 1]), name='U')
 
     def __call__(self, Y, Y_hat, b):
         
@@ -132,7 +132,7 @@ class Classifier():
     def __init__(self, xdim, initializer = GlorotNormal):
 
         #self.ini = initializer()
-        self.ini = RandomNormal(mean=0.0, stddev=1.5)
+        #self.ini = RandomNormal(mean=0.0, stddev=1.5)
 
         #self.W = tf.Variable(self.ini(shape=(1, xdim)), name='W')
         self.W = tf.Variable(tf.zeros([1, xdim]), name='W')

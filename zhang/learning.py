@@ -67,7 +67,7 @@ def train(model, X, Y, A, optimizer, alpha=1):
     model(X, Y, A) #to compute the foward
     return False
 
-def train_loop(model, raw_data, train_dataset, epochs):
+def train_loop(model, raw_data, train_dataset, epochs, optimizer):
     
     print("> Epoch | Class Loss | Adv Loss | Class Acc | Adv Acc")
 
@@ -77,15 +77,12 @@ def train_loop(model, raw_data, train_dataset, epochs):
         Y_hat = None
         A_hat = None
         batch_count = 1
-
+        
         alpha=1/sqrt(epoch+1)
-        lr=0.001/(epoch+1)
-        opt = Adam(learning_rate=lr)
         
         for X, Y, A in train_dataset:
             
-            r = train(model, X, Y, A, opt, alpha)
-            #r = train(model, X, Y, A, opt)
+            r = train(model, X, Y, A, optimizer, alpha)
 
             if r:
                 print('parou')
