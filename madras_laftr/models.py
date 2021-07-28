@@ -290,7 +290,7 @@ class EqOddsUnweightedGan(DemParGan):
         self.adv = Adversarial(self.zdim + 1 * self.ydim, self.hidden_layer_specs, self.adim)
 
     def get_adv_input(self):
-        return tf.concat([self.Z, self.A], 1)
+        return tf.concat([self.Z, self.Y], 1)
 
 class EqOppUnweightedGan(DemParGan):
     """
