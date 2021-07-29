@@ -319,8 +319,8 @@ class UnfairMLP(tf.Module):
         super().__init__()
 
         self.xdim = xdim
-        self.hidden_layer = int(self.xdim/2)
-        self.hidden_layer2 = int(self.hidden_layer/3)
+        self.hidden_layer = 8
+        self.hidden_layer2 = 8
         self.ydim = ydim #output dimension
         self.shapes = [self.xdim, self.hidden_layer, self.hidden_layer2, self.ydim]
 

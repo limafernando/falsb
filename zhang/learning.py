@@ -67,18 +67,28 @@ def train(model, X, Y, A, optimizer, alpha=1):
     model(X, Y, A) #to compute the foward
     return False
 
-def train_loop(model, raw_data, train_dataset, epochs, optimizer):
+def train_loop(model, raw_data, train_dataset, epochs, opt=None):
     
     print("> Epoch | Class Loss | Adv Loss | Class Acc | Adv Acc")
 
     x_train, y_train, a_train = raw_data
+
+    if opt is not None:
+        optimizer = opt
+        decay4epoch = False
+    else:
+        decay4epoch = True
     
     for epoch in range(epochs):
         Y_hat = None
         A_hat = None
         batch_count = 1
         
-        alpha=1/sqrt(epoch+1)
+        alpha=1/(epoch+1)#sqrt(epoch+1)
+
+        if decay4epoch:
+            lr = 0.001/(epoch+1)
+            optimizer = Adam(learning_rate=lr)
         
         for X, Y, A in train_dataset:
             
