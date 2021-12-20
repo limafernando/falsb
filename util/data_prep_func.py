@@ -1,12 +1,28 @@
 import numpy as np
 from csv import writer
+from sklearn import preprocessing
 
 def continuous(x):
     return [float(x)]
 
+'''def continous(x):
+    return preprocessing.normalize([x])'''
+
 def categorical2numerical(x, choices):
     label = choices.index(x)
     return label
+
+'''def bucket(x, buckets):
+    x = float(x)
+    n = len(buckets)
+    label = n
+    for i in range(n):
+        if x <= buckets[i]:
+            label = i
+            break
+    template = [0 for j in range(n)]
+    template[label] = 1
+    return template'''
 
 def bucket(x, buckets):
     x = float(x)
@@ -16,9 +32,7 @@ def bucket(x, buckets):
         if x <= buckets[i]:
             label = i
             break
-    template = [0. for j in range(n + 1)]
-    template[label] = 1.
-    return template
+    return label
 
 def onehot(x, choices):
     if not x in choices:
