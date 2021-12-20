@@ -33,11 +33,13 @@ def select_data_step(learning_step, data_folder):
     
     if learning_step == 'train':
         train_file = data_folder/r'post_prep/train.csv'
-        train_data = np.genfromtxt(train_file, delimiter=',')
+        #train_file = 'util/post_prep_adult.csv'
+        train_data = np.genfromtxt(train_file, delimiter=',')[1:]
 
         num_examples = train_data.shape[0]
         #x, y, a = train_data[:-10,:-1], train_data[:-10,-1].reshape((num_examples-10, 1)), train_data[:-10,-2].reshape((num_examples-10, 1)) #-10 to do consider only perfect batchs
-        x = train_data[:,:-1]
+        
+        x = train_data[:,1:-1] #from index 1 because now we save the index
         y = train_data[:,-1].reshape(num_examples, 1)
         a = train_data[:,-2].reshape(num_examples, 1)
         
@@ -50,7 +52,8 @@ def select_data_step(learning_step, data_folder):
         num_examples = valid_data.shape[0]
 
         #x, y, a = valid_data[:-8,:-1], valid_data[:-8,-1].reshape((num_examples-8, 1)), valid_data[:-8,-2].reshape((num_examples-8, 1))
-        x = valid_data[:,:-1]
+        
+        x = valid_data[:,1:-1] #from index 1 because now we save the index
         y = valid_data[:,-1].reshape(num_examples, 1)
         a = valid_data[:,-2].reshape(num_examples, 1)
         return x, y, a
@@ -62,7 +65,8 @@ def select_data_step(learning_step, data_folder):
         num_examples = test_data.shape[0]
 
         #x, y, a = test_data[:,:-1], test_data[:,-1].reshape((num_examples, 1)), test_data[:,-2].reshape((num_examples, 1))
-        x = test_data[:,:-1]
+        
+        x = test_data[:,1:-1] #from index 1 because now we save the index
         y = test_data[:,-1].reshape(num_examples, 1)
         a = test_data[:,-2].reshape(num_examples, 1)
         return x, y, a
