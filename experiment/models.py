@@ -57,8 +57,8 @@ class Generator2(tf.Module):
 
         #return tf.nn.relu(layer)
         #return tf.concat([tf.nn.relu(layer), A], 1)
-        #return tf.concat([tf.nn.sigmoid(layer), A], 1)
-        return tf.concat([layer, A], 1)
+        return tf.concat([tf.nn.sigmoid(layer), A], 1)
+        #return tf.concat([layer, A], 1)
 
 
 ######################################
