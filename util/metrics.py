@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 eps = 1e-12
 
@@ -168,6 +169,40 @@ def DP(Ypred, A): #deltaDP
 
 def NLL(Y, Ypred, eps=eps):
     return -np.mean(np.multiply(Y, np.log(Ypred + eps)) + np.multiply(1. - Y, np.log(1 - Ypred + eps)))
+
+def filtering(mask, data):
+    m = np.greater(mask, 0.5).flatten()
+    return data[m]
+
+def euclidian_dist(real_data, gen_data, conditional=False):
+
+    if conditional:
+        a0_filter4real_data = filtering(mask=1-real_data[1], data=real_data[0])
+        a0_filter4gen_data = filtering(mask=1-gen_data[1], data=gen_data[0])
+
+        a1_filter4real_data = filtering(mask=real_data[1], data=real_data[0])
+        a1_filter4gen_data = filtering(mask=gen_data[1], data=gen_data[0])
+        
+        ed4a0 = euclidian_dist(a0_filter4real_data, a0_filter4gen_data)
+        ed4a1 = euclidian_dist(a1_filter4real_data, a1_filter4gen_data)
+        
+        return (ed4a0, ed4a1)
+
+    else:
+        real_data = tf.dtypes.cast(real_data, tf.double)
+        gen_data = tf.dtypes.cast(gen_data, tf.double)
+
+        if real_data.shape[0] > gen_data.shape[0]:
+            real_data = real_data[:gen_data.shape[0]]
+        elif real_data.shape[0] < gen_data.shape[0]:
+            gen_data = gen_data[:real_data.shape[0]]
+        else:
+            pass
+
+        '''return tf.sqrt(
+                    tf.math.reduce_sum(
+                        tf.math.squared_difference(real_data, gen_data)))'''
+        return tf.norm(tensor=(real_data - gen_data), ord='euclidean')
 
 if __name__ == '__main__':
     main()
