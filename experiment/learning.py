@@ -1,4 +1,6 @@
+from audioop import cross
 from math import sqrt, isnan
+from numpy import real
 
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
@@ -11,9 +13,10 @@ import seaborn as sns
 
 from util import metrics
 
-def discriminator_loss(real_output, fake_output):
-    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
     
+
+def discriminator_loss(real_output, fake_output):
     real_loss = cross_entropy(tf.ones_like(real_output), real_output)
     fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
     total_loss = real_loss + fake_loss
@@ -21,8 +24,6 @@ def discriminator_loss(real_output, fake_output):
     return total_loss
 
 def generator_loss(fake_output):
-    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-    
     return cross_entropy(tf.ones_like(fake_output), fake_output)
 
 def train(generator, discriminator, X, Y, A, batch_size, noise, gen_opt, disc_opt):
@@ -42,9 +43,9 @@ def train(generator, discriminator, X, Y, A, batch_size, noise, gen_opt, disc_op
         disc_loss = discriminator_loss(disc_real_data, disc_gen_data)
     
     gen_grads = gen_tape.gradient(gen_loss, generator.variables)
-    gen_opt.apply_gradients(zip(gen_grads, generator.variables))
-    
     disc_grads = disc_tape.gradient(disc_loss, discriminator.variables)
+        
+    gen_opt.apply_gradients(zip(gen_grads, generator.variables))
     disc_opt.apply_gradients(zip(disc_grads,discriminator.variables))
 
     return gen_loss, disc_loss

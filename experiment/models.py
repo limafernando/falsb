@@ -36,7 +36,7 @@ class Generator2(tf.Module):
         if not self.is_built:
             self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='Gen_Ws') 
                                                                                     for i in range(len(self.shapes)-1)]
-            self.bs = [tf.Variable(self.zeros(shape=(batch_size, self.shapes[i+1])), name='Gen_bs') 
+            self.bs = [tf.Variable(self.initializer(shape=(batch_size, self.shapes[i+1])), name='Gen_bs') 
                                                                                     for i in range(len(self.shapes)-1)]
 
             self.is_built = True                                                                                
@@ -55,10 +55,9 @@ class Generator2(tf.Module):
         #layer = tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1]))
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
-        #return tf.nn.relu(layer)
         #return tf.concat([tf.nn.relu(layer), A], 1)
         return tf.concat([tf.nn.sigmoid(layer), A], 1)
-        #return tf.concat([layer, A], 1)
+        #return tf.concat([tf.nn.tanh(layer), A], 1)
 
 
 ######################################
@@ -103,9 +102,7 @@ class Discriminator2(tf.Module):
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
-        return tf.nn.relu(layer)
-        #return tf.nn.sigmoid(layer)
-        #return layer
+        return tf.nn.sigmoid(layer)
 
 
 
