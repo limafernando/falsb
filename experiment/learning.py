@@ -13,7 +13,7 @@ import seaborn as sns
 
 from util import metrics
 
-cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=False)
     
 
 def discriminator_loss(real_output, fake_output):
@@ -25,6 +25,14 @@ def discriminator_loss(real_output, fake_output):
 
 def generator_loss(fake_output):
     return cross_entropy(tf.ones_like(fake_output), fake_output)
+
+def model_loss(real_output, fake_output):
+    real_loss = cross_entropy(tf.ones_like(real_output), real_output)
+    fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
+    total_loss = real_loss + fake_loss
+    
+    return total_loss
+
 
 def train(generator, discriminator, X, Y, A, batch_size, noise, gen_opt, disc_opt):
 
@@ -38,6 +46,10 @@ def train(generator, discriminator, X, Y, A, batch_size, noise, gen_opt, disc_op
         
         disc_real_data = discriminator(real_data, batch_size)
         disc_gen_data = discriminator(gen_data, batch_size)
+
+        '''total_loss = model_loss(disc_real_data, disc_gen_data)
+        gen_loss = -total_loss
+        disc_loss = total_loss'''
         
         gen_loss = generator_loss(disc_gen_data)
         disc_loss = discriminator_loss(disc_real_data, disc_gen_data)
