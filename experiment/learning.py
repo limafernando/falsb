@@ -43,9 +43,9 @@ def train(generator, discriminator, X, Y, A, batch_size, noise, gen_opt, disc_op
         disc_loss = discriminator_loss(disc_real_data, disc_gen_data)
     
     gen_grads = gen_tape.gradient(gen_loss, generator.variables)
-    disc_grads = disc_tape.gradient(disc_loss, discriminator.variables)
-        
     gen_opt.apply_gradients(zip(gen_grads, generator.variables))
+    
+    disc_grads = disc_tape.gradient(disc_loss, discriminator.variables)
     disc_opt.apply_gradients(zip(disc_grads,discriminator.variables))
 
     return gen_loss, disc_loss

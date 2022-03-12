@@ -7,19 +7,22 @@ from tensorflow.python.ops.gen_batch_ops import batch
 class Generator2(tf.Module):
     #takes as input the protected attribute (a) and the noise variable (z)
 
-    def __init__(self, xdim, ydim, adim):
+    def __init__(self, xdim, ydim, adim, noise_dim):
         super().__init__()
         '''self.zdim = xdim + ydim #in our dataset the protected attribute is included in the att vector x
         self.adim = adim'''
         self.zdim = xdim + ydim #random noise dimension
         self.data_dim = xdim + adim + ydim
+        self.noise_dim = noise_dim
         #self.hidden_layer = [128,128] #paper implementation
         #self.shapes = [self.data_dim, 128, 256, 512, 512, 256, 128, self.zdim]
-        self.shapes = [self.data_dim, 256, 256, self.zdim]
+        #self.shapes = [self.data_dim, 128, 256, 512, 256, 128, self.zdim]
+        self.shapes = [self.noise_dim+1, 256, 256, self.zdim]
 
         self.zeros = Zeros()
         self.ones = Ones()
-        self.initializer = tf.keras.initializers.RandomNormal(mean=0.5, stddev=0.5, seed=314159)
+        #self.initializer = tf.keras.initializers.RandomNormal(mean=0.5, stddev=0.5, seed=314159)
+        self.initializer = tf.keras.initializers.RandomNormal(mean=0.5, stddev=0.02, seed=314159)
 
         self.is_built = False
 
@@ -38,6 +41,10 @@ class Generator2(tf.Module):
                                                                                     for i in range(len(self.shapes)-1)]
             self.bs = [tf.Variable(self.initializer(shape=(batch_size, self.shapes[i+1])), name='Gen_bs') 
                                                                                     for i in range(len(self.shapes)-1)]
+            '''self.Ws = [tf.Variable(self.initializer(shape=(self.shapes[i+1], self.shapes[i])), name='Gen_Ws') 
+                                                                                    for i in range(len(self.shapes)-1)]
+            self.bs = [tf.Variable(self.zeros(shape=(batch_size, self.shapes[i+1])), name='Gen_bs') 
+                                                                                    for i in range(len(self.shapes)-1)]'''
 
             self.is_built = True                                                                                
 
@@ -74,6 +81,8 @@ class Discriminator2(tf.Module):
 
         self.zeros = Zeros()
         self.ones = Ones()
+        #self.initializer = tf.keras.initializers.RandomNormal(mean=0.5, stddev=0.5, seed=314159)
+        self.initializer = tf.keras.initializers.RandomNormal(mean=0.5, stddev=0.02, seed=314159)
 
         self.is_built = False
 
@@ -83,10 +92,14 @@ class Discriminator2(tf.Module):
         #batch_size = layer.shape[0]
         
         if not self.is_built:
-            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='D_Ws') 
+            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='Gen_Ws') 
+                                                                                    for i in range(len(self.shapes)-1)]
+            self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='Gen_bs') 
+                                                                                    for i in range(len(self.shapes)-1)]
+            '''self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='D_Ws') 
                                                                                     for i in range(len(self.shapes)-1)]
             self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='D_bs') 
-                                                                                    for i in range(len(self.shapes)-1)]
+                                                                                    for i in range(len(self.shapes)-1)]'''
 
             self.is_built = True                                                                                
 
@@ -96,8 +109,8 @@ class Discriminator2(tf.Module):
 
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
             #layer = tf.nn.leaky_relu(layer)
-            #layer = tf.nn.relu(layer)
-            layer = tf.nn.sigmoid(layer)
+            layer = tf.nn.relu(layer)
+            #layer = tf.nn.sigmoid(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
