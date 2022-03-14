@@ -7,13 +7,14 @@ from tensorflow.python.ops.gen_batch_ops import batch
 class Generator2(tf.Module):
     #takes as input the protected attribute (a) and the noise variable (z)
 
-    def __init__(self, xdim, ydim, adim, noise_dim):
+    def __init__(self, xdim, ydim, adim, noise_dim, dec):
         super().__init__()
         '''self.zdim = xdim + ydim #in our dataset the protected attribute is included in the att vector x
         self.adim = adim'''
         self.zdim = xdim + ydim #random noise dimension
         self.data_dim = xdim + adim + ydim
         self.noise_dim = noise_dim
+        self.dec = dec
         #self.hidden_layer = [128,128] #paper implementation
         #self.shapes = [self.data_dim, 128, 256, 512, 512, 256, 128, self.zdim]
         #self.shapes = [self.data_dim, 128, 256, 512, 256, 128, self.zdim]
@@ -63,8 +64,13 @@ class Generator2(tf.Module):
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
         #return tf.concat([tf.nn.relu(layer), A], 1)
-        return tf.concat([tf.nn.sigmoid(layer), A], 1)
+        #return tf.concat([tf.nn.sigmoid(layer), A], 1)
         #return tf.concat([tf.nn.tanh(layer), A], 1)
+
+        gen_data = tf.nn.sigmoid(layer)
+        dec_data = self.dec(gen_data, batch_size)
+        dec_data = tf.concat([dec_data, A], 1)
+        return dec_data
 
 
 ######################################
