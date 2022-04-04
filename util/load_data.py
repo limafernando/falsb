@@ -1,6 +1,17 @@
 from pathlib import Path
 import numpy as np
 
+VALID_DATA_NAMES = ['adult', 'adult-race', 'german', 'titanic', 'heritage-health']
+VALID_LEARNING_STEPS = ['train', 'valid', 'test']
+ACCESS_INDEXES = {
+    'adult': [slice(-1), -1, -2],
+    'adult-race':[],
+    'german':[],
+    'titanic':[],
+    'heritage-health':[]
+}
+
+
 def load_data(data_name, learning_step):
     """Function to load data.
 
@@ -11,61 +22,36 @@ def load_data(data_name, learning_step):
     Returns:
         [type]: [description]
     """
+    if not data_name in VALID_DATA_NAMES:
+        print('Invalid data name! Input: {} | Valid data names: [{}]',format(VALID_DATA_NAMES))
+        return None
+
+    if not learning_step in VALID_LEARNING_STEPS:
+        print('Invalid data name! Input: {} | Valid steps: [{}]',format(VALID_LEARNING_STEPS))
+        return None
 
     data_folder = select_data_folder(data_name)
-    x, y, a = select_data_step(learning_step, data_folder)
+    access_indexes = get_access_indexes(data_name)
+    x, y, a = select_data_step(learning_step, access_indexes, data_folder)
     
     return x, y, a
 
 
 def select_data_folder(data_name):
-    VALID_DATA_NAMES = 'adult'
-
-    if data_name == 'adult':
-        data_folder = Path(r'/home/luiz/ufpb/mestrado/code/falsb/data/adult')
-        return data_folder
-    else:
-        print('Invalid data name! Input: {} | Valid data names: [{}]',format(VALID_DATA_NAMES))
+    return Path(r'data/{}'.format(data_name))
 
 
+def get_access_indexes(data_name):
+    return ACCESS_INDEXES[data_name]
 
-def select_data_step(learning_step, data_folder):
+
+def select_data_step(learning_step, access_indexes, data_folder):
+    file = data_folder/r'post_prep/{}.csv'.format(learning_step)
+    data = np.genfromtxt(file, delimiter=',', skip_header=True)[:, 1:]
+
+    num_examples = data.shape[0]
+    x = data[:, access_indexes[0]]
+    y = data[:, access_indexes[1]].reshape(num_examples, 1)
+    a = data[:, access_indexes[2]].reshape(num_examples, 1)
     
-    if learning_step == 'train':
-        train_file = data_folder/r'post_prep/train.csv'
-        train_data = np.genfromtxt(train_file, delimiter=',')
-
-        num_examples = train_data.shape[0]
-        x, y, a = train_data[:-10,:-1], train_data[:-10,-1].reshape((num_examples-10, 1)), train_data[:-10,-2].reshape((num_examples-10, 1)) #-10 to do consider only perfect batchs
-        #x = train_data[:,:-1]
-        #y = train_data[:,-1].reshape(num_examples, 1)
-        #a = train_data[:,-2].reshape(num_examples, 1)
-        
-        return x, y, a
-    
-    elif learning_step == 'valid':
-        valid_file = data_folder/r'post_prep/valid.csv'
-        valid_data = np.genfromtxt(valid_file, delimiter=',')
-
-        num_examples = valid_data.shape[0]
-
-        x, y, a = valid_data[:-8,:-1], valid_data[:-8,-1].reshape((num_examples-8, 1)), valid_data[:-8,-2].reshape((num_examples-8, 1))
-        #x = valid_data[:,:-1]
-        #y = valid_data[:,-1].reshape(num_examples, 1)
-        #a = valid_data[:,-2].reshape(num_examples, 1)
-        return x, y, a
-    
-    elif learning_step == 'test':
-        test_file = data_folder/r'post_prep/test.csv'
-        test_data = np.genfromtxt(test_file, delimiter=',')
-
-        num_examples = test_data.shape[0]
-
-        x, y, a = test_data[:,:-1], test_data[:,-1].reshape((num_examples, 1)), test_data[:,-2].reshape((num_examples, 1))
-        #x = test_data[:,:-1]
-        #y = test_data[:,-1].reshape(num_examples, 1)
-        #a = test_data[:,-2].reshape(num_examples, 1)
-        return x, y, a
-    
-    else:
-        print('Invalid learning step! Input: {} | Valid set: [train, test, valid]'.format(learning_step))
+    return x, y, a
