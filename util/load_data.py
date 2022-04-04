@@ -47,7 +47,7 @@ def get_access_indexes(data_name):
 
 def select_data_step(learning_step, access_indexes, data_folder):
     file = data_folder/r'post_prep/{}.csv'.format(learning_step)
-    data = np.genfromtxt(file, delimiter=',')
+    data = np.genfromtxt(file, delimiter=',', skip_header=True)[:, 1:]
 
     num_examples = data.shape[0]
     x = data[:, access_indexes[0]]
