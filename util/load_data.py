@@ -1,9 +1,15 @@
 from pathlib import Path
 import numpy as np
 
-VALID_DATA_NAMES = ['adult', ' adult-race', 'german', 'titanic', 'heritage-health']
+VALID_DATA_NAMES = ['adult', 'adult-race', 'german', 'titanic', 'heritage-health']
 VALID_LEARNING_STEPS = ['train', 'valid', 'test']
-ACCESS_INDEXES = {'adult': [slice(-1), -1, -2]}
+ACCESS_INDEXES = {
+    'adult': [slice(-1), -1, -2],
+    'adult-race':[],
+    'german':[],
+    'titanic':[],
+    'heritage-health':[]
+}
 
 
 def load_data(data_name, learning_step):
