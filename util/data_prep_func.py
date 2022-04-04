@@ -16,9 +16,10 @@ def bucket(x, buckets):
         if x <= buckets[i]:
             label = i
             break
-    template = [0. for j in range(n + 1)]
-    template[label] = 1.
-    return template
+    # template = [0. for j in range(n + 1)]
+    # template[label] = 1.
+    # return template
+    return label
 
 def onehot(x, choices):
     if not x in choices:
