@@ -3,26 +3,36 @@ import numpy as np
 
 from util import metrics
 
-def evaluation(model, valid_data):
+def evaluation(model, evaluation_data):
     Y_hat = None
     A_hat = None
+    Y_real = None
+    A_real = None
     batch_count = 1
     
-    for X, Y, A in valid_data:
+    for X, Y, A in evaluation_data:
         
         model(X, Y, A)
         
         if batch_count == 1:
             Y_hat = model.Y_hat
             A_hat = model.A_hat
+            Y_real = Y
+            A_real = A
             batch_count += 1
         else:
             Y_hat = tf.concat([Y_hat, model.Y_hat], 0)
             A_hat = tf.concat([A_hat, model.A_hat], 0)
+            Y_real = tf.concat([Y_real, Y], 0)
+            A_real = tf.concat([A_real, A], 0)
     
-    return Y_hat, A_hat
+    return Y_real, A_real, Y_hat, A_hat
 
-def compute_metrics(Y, Y_hat, A, A_hat):
+def compute_metrics(Y, A, Y_hat, A_hat):
+
+    Y = Y.numpy()
+    A = A.numpy()
+
     Y_hat = tf.math.round(Y_hat)
     A_hat = tf.math.round(A_hat)
     

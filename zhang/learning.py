@@ -71,7 +71,8 @@ def train_loop(model, raw_data, train_dataset, epochs, opt=None):
     
     print("> Epoch | Class Loss | Adv Loss | Class Acc | Adv Acc")
 
-    x_train, y_train, a_train = raw_data
+    #x_train, y_train, a_train = raw_data
+    dataset_size = tf.data.experimental.cardinality(train_dataset).numpy()
 
     if opt is not None:
         optimizer = opt
@@ -82,7 +83,9 @@ def train_loop(model, raw_data, train_dataset, epochs, opt=None):
     for epoch in range(epochs):
         Y_hat = None
         A_hat = None
-        batch_count = 1
+        
+        clas_acc = 0
+        adv_acc = 0
         
         alpha=1/(epoch+1)#sqrt(epoch+1)
 
@@ -99,18 +102,15 @@ def train_loop(model, raw_data, train_dataset, epochs, opt=None):
                 print(model.clas_loss, model.adv_loss)
                 break
 
-            if batch_count == 1:
-                Y_hat = model.Y_hat
-                A_hat = model.A_hat
-                batch_count += 1
-            else:
-                Y_hat = tf.concat([Y_hat, model.Y_hat], 0)
-                A_hat = tf.concat([A_hat, model.A_hat], 0)
+            Y_hat = model.Y_hat
+            A_hat = model.A_hat
+            clas_acc += metrics.accuracy(Y, tf.math.round(Y_hat))
+            adv_acc += metrics.accuracy(A, tf.math.round(A_hat))
 
         clas_loss = model.clas_loss
         adv_loss = model.adv_loss
-        clas_acc = metrics.accuracy(y_train, tf.math.round(Y_hat))
-        adv_acc = metrics.accuracy(a_train, tf.math.round(A_hat))
+        clas_acc = clas_acc / dataset_size
+        adv_acc = adv_acc / dataset_size
     
         print("> {} | {} | {} | {} | {}".format(
             epoch+1, 
