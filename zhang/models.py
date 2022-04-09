@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.losses import BinaryCrossentropy
+from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy
 from tensorflow.keras.initializers import GlorotNormal, RandomNormal
 from math import isnan
 
@@ -24,8 +24,12 @@ class Adversarial():
 
     def get_loss(self, A, A_hat):
         A_hat = tf.clip_by_value(A_hat, 1e-9, 1.)
-        bce = BinaryCrossentropy(from_logits=False)
-        return bce(A, A_hat)
+        if self.adim == 1:
+            bce = BinaryCrossentropy(from_logits=False)
+            return bce(A, A_hat)
+        else:
+            cce = CategoricalCrossentropy(from_logits=False)
+            return cce(A, A_hat)
 
     '''
     def get_filtered_inputs(self, W, Y, Y_hat, A):
@@ -60,10 +64,11 @@ class Adversarial():
         '''
 
 class AdversarialDemPar(Adversarial):
-    def __init__(self):
+    def __init__(self, adim):
         super(AdversarialDemPar, self).__init__()
+        self.adim = adim
         #self.U = tf.Variable(self.ini(shape=(1, 1)), name='U')
-        self.U = tf.Variable(tf.zeros([1, 1]), name='U')
+        self.U = tf.Variable(tf.zeros([self.adim, 1]), name='U')
 
     def __call__(self, Y, Y_hat, b):
         
@@ -79,19 +84,25 @@ class AdversarialDemPar(Adversarial):
             self.U = self.build(U_shape)
             #print(self.U)
             self.is_built = True #check how to improve this build of U'''
-
-        self.A_hat = tf.math.sigmoid(
-                        tf.add(
-                            tf.matmul(self.S, tf.transpose(self.U)), 
-                            b))
+        if self.adim == 1:
+            self.A_hat = tf.math.sigmoid(
+                            tf.add(
+                                tf.matmul(self.S, tf.transpose(self.U)), 
+                                b))
+        else:
+            self.A_hat = tf.math.softmax(
+                            tf.add(
+                                tf.matmul(self.S, tf.transpose(self.U)), 
+                                b))
 
         return self.A_hat
 
 class AdversarialEqOdds(Adversarial):
-    def __init__(self):
+    def __init__(self, adim):
         super(AdversarialEqOdds, self).__init__()
+        self.adim = adim
         #self.U = tf.Variable(self.ini(shape=(1, 3)), name='U')
-        self.U = tf.Variable(tf.zeros([1, 3]), name='U')
+        self.U = tf.Variable(tf.zeros([self.adim, 3]), name='U')
 
     def __call__(self, Y, Y_hat, b):
         
@@ -111,16 +122,24 @@ class AdversarialEqOdds(Adversarial):
             self.is_built = True #check how to improve this build of U - getting a warning
         #print('U ', self.U.shape)'''
 
-        self.A_hat = tf.math.sigmoid(
+        if self.adim == 1:
+            self.A_hat = tf.math.sigmoid(
+                            tf.add(
+                                tf.matmul(concatenation, tf.transpose(self.U)), 
+                                b))
+        else:
+            self.A_hat = tf.math.softmax(
                         tf.add(
                             tf.matmul(concatenation, tf.transpose(self.U)), 
                             b))
+
+        
         #print('A_hat ', self.A_hat.shape)
         return self.A_hat
 
 class AdversarialEqOpp(AdversarialEqOdds):
-    def __init__(self):
-        super(AdversarialEqOpp, self).__init__()
+    def __init__(self, adim):
+        super(AdversarialEqOpp, self).__init__(adim)
 
     def filter_As(self, A, A_hat, Y):
         pass
@@ -176,14 +195,14 @@ class UnfairLogisticRegression():
 ##########################################################################################################################
 
 class FairLogisticRegression():
-    def __init__(self, xdim, batch_size, fairdef='EqOdds', initializer = GlorotNormal):
+    def __init__(self, xdim, adim, batch_size, fairdef='EqOdds', initializer = GlorotNormal):
         
         self.ini = initializer()
         self.batch_size = batch_size
         self.fairdef = fairdef
         self.clas = Classifier(xdim)
         adv = self.get_adv_model(self.fairdef)
-        self.adv = adv() #initializing the adversarial object
+        self.adv = adv(adim) #initializing the adversarial object
 
         self.b = tf.Variable(tf.ones([self.batch_size, 1]), name='b')
         #self.b = tf.Variable(self.ini(shape=(self.batch_size, 1)), name='b')
@@ -208,18 +227,27 @@ class FairLogisticRegression():
             
             self.A_hat = self.adv(self.Y, self.Y_hat, self.b)
 
-            mask = tf.math.equal(self.Y, 1.) #to consider only where Y = 1
+            mask = tf.math.equal(self.Y, 1.).numpy() #to consider only where Y = 1
+            mask = mask.reshape(mask.shape[0],)
+
             col = tf.TensorShape([1])
             lines = None
             shape = None
-            A_filtered = tf.Variable(self.A[mask])
+
+            A_filtered = tf.boolean_mask(self.A, mask)#tf.Variable(self.A[mask])
+            
             lines = A_filtered.shape
             shape = lines.concatenate(col)
+
             A_filtered = tf.reshape(A_filtered, shape)
+
             A_hat_filtered = tf.Variable(self.A_hat[mask])
+
             lines = A_hat_filtered.shape
             shape = lines.concatenate(col)
+
             A_hat_filtered = tf.reshape(A_hat_filtered, shape)
+            
             #self.adv_loss = self.adv.get_loss(A_filtered, A_hat_filtered)
             self.adv_loss = self.adv.get_loss(tf.math.multiply(self.Y, self.A), tf.math.multiply(self.Y, self.A_hat))
             
