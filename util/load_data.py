@@ -66,6 +66,6 @@ def select_data_step(learning_step, access_indexes, data_folder, data_name):
     num_examples = data.shape[0]
     x = data[:, access_indexes[0]]
     y = data[:, access_indexes[1]].reshape(num_examples, DIMENSIONS[data_name][1])
-    a = data[:, access_indexes[2]].reshape(num_examples, DIMENSIONS[data_name][1])
+    a = data[:, access_indexes[2]].reshape(num_examples, DIMENSIONS[data_name][2])
     
     return x, y, a

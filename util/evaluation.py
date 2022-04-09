@@ -28,7 +28,7 @@ def evaluation(model, evaluation_data):
     
     return Y_real, A_real, Y_hat, A_hat
 
-def compute_metrics(Y, A, Y_hat, A_hat):
+def compute_metrics(Y, A, Y_hat, A_hat, adim=1):
 
     Y = Y.numpy()
     A = A.numpy()
@@ -42,9 +42,9 @@ def compute_metrics(Y, A, Y_hat, A_hat):
     print("> Class Acc | Adv Acc")
     print("> {} | {}".format(clas_acc, adv_acc))
 
-    dp = metrics.DP(Y_hat.numpy(), A)
-    deqodds = metrics.DEqOdds(Y, Y_hat.numpy(), A)
-    deqopp = metrics.DEqOpp(Y, Y_hat.numpy(), A)
+    dp = metrics.DP(Y_hat.numpy(), A, adim)
+    deqodds = metrics.DEqOdds(Y, Y_hat.numpy(), A, adim)
+    deqopp = metrics.DEqOpp(Y, Y_hat.numpy(), A, adim)
 
     print("> DP | DEqOdds | DEqOpp")
     print("> {} | {} | {}".format(dp, deqodds, deqopp))
@@ -54,16 +54,32 @@ def compute_metrics(Y, A, Y_hat, A_hat):
     fp = metrics.FP(Y, Y_hat.numpy())
     fn = metrics.FN(Y, Y_hat.numpy())
 
+    confusion_matrix = np.array([[tn, fp],
+                                [fn, tp]])
+
     print('> Confusion Matrix \n' +
                 'TN: {} | FP: {} \n'.format(tn, fp) +
                 'FN: {} | TP: {}'.format(fn, tp))
 
-    m = [metrics.TN, metrics.FP, metrics.FN, metrics.TP]
+    if adim == 1:
+        metrics_a0, metrics_a1 = group_confusion_matrix(A, Y, Y_hat)
+        return clas_acc, dp, deqodds, deqopp, confusion_matrix, metrics_a0, metrics_a1
+
+    return clas_acc, dp, deqodds, deqopp, confusion_matrix#, metrics_a0, metrics_a1
+
+def compute_tradeoff(performance_metric, fairness_metric):
+    tradeoff = 2*(performance_metric*fairness_metric)/(performance_metric+fairness_metric)
+    return tradeoff
+
+
+def group_confusion_matrix(A, Y, Y_hat):
+    fn_metrics = [metrics.TN, metrics.FP, metrics.FN, metrics.TP]
+    #if adim == 1:
     metrics_a0 = [0, 0, 0, 0]
     metrics_a1 = [0, 0, 0, 0]
-    for i in range(len(m)):
-        metrics_a0[i] = metrics.subgroup(m[i], A, Y, Y_hat.numpy())
-        metrics_a1[i] = metrics.subgroup(m[i], 1 - A, Y, Y_hat.numpy())
+    for i in range(len(fn_metrics)):
+        metrics_a0[i] = metrics.subgroup(fn_metrics[i], A, Y, Y_hat.numpy())
+        metrics_a1[i] = metrics.subgroup(fn_metrics[i], 1 - A, Y, Y_hat.numpy())
 
     print('> Confusion Matrix for A = 0 \n' +
             'TN: {} | FP: {} \n'.format(metrics_a0[0], metrics_a0[1]) +
@@ -73,11 +89,12 @@ def compute_metrics(Y, A, Y_hat, A_hat):
             'TN: {} | FP: {} \n'.format(metrics_a1[0], metrics_a1[1]) +
             'FN: {} | TP: {}'.format(metrics_a1[2], metrics_a1[3]))
 
-    confusion_matrix = np.array([[tn, fp],
-                                [fn, tp]])
+    # for i in range(len(fn_metrics)):
+    #     metrics_a0[i] = metrics.categorical_subgroup(fn_metrics[i], A, Y, Y_hat.numpy())
+    #     metrics_a1[i] = metrics.subgroup(fn_metrics[i], 1 - A, Y, Y_hat.numpy())
 
-    return clas_acc, dp, deqodds, deqopp, confusion_matrix, metrics_a0, metrics_a1
+    #     print('> Confusion Matrix for A = 0 \n' +
+    #             'TN: {} | FP: {} \n'.format(metrics_a0[0], metrics_a0[1]) +
+    #             'FN: {} | TP: {}'.format(metrics_a0[2], metrics_a0[3]))
 
-def compute_tradeoff(performance_metric, fairness_metric):
-    tradeoff = 2*(performance_metric*fairness_metric)/(performance_metric+fairness_metric)
-    return tradeoff
+    return metrics_a0, metrics_a1
