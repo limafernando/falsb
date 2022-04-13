@@ -1,7 +1,8 @@
+from zlib import Z_DEFAULT_STRATEGY
 import tensorflow as tf
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.initializers import GlorotNormal, Zeros, Ones
-from tensorflow.keras.losses import BinaryCrossentropy
+from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy
 
 EPS = 1e-8
 CLAS_COEFF = 1.
@@ -208,7 +209,10 @@ class Adversarial(tf.Module):
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
-        return tf.nn.sigmoid(layer)
+        if self.adim == 1:
+            return tf.nn.sigmoid(layer)
+        else:
+            return tf.nn.softmax(layer)
 
 class DemParGan(tf.Module):
     """
@@ -248,7 +252,7 @@ class DemParGan(tf.Module):
         
         self.clas_loss = self.get_clas_loss(self.Y_hat, self.Y)
         self.recon_loss = self.get_recon_loss(self.X_hat, self.X)
-        self.adv_loss = self.get_advers_loss(self.A_hat, self.A)
+        self.adv_loss = self.get_advers_loss(self.A_hat, self.A, self.adim)
         self.loss = self.get_loss()
         self.clas_err = classification_error(self.Y, self.Y_hat)
         self.adv_err = classification_error(self.A, self.A_hat)
@@ -262,8 +266,8 @@ class DemParGan(tf.Module):
     def get_recon_loss(self, X_hat, X):
         return tf.reduce_mean(tf.square(X - X_hat), axis=1)
 
-    def get_advers_loss(self, A_hat, A):
-        return cross_entropy(A, A_hat)
+    def get_advers_loss(self, A_hat, A, adim):
+        return cross_entropy(A, A_hat, adim)
 
     def get_loss(self):  # produce losses for the fairness task
         return tf.reduce_mean([
@@ -394,14 +398,19 @@ class UnfairMLP(tf.Module):
 #########################################################################################
 
 '''model-specific utils'''
-def cross_entropy(target, pred, weights=None, eps=EPS):
-    if weights == None:
-        weights = tf.ones_like(pred)
-    return -tf.squeeze(
-            tf.multiply(weights, 
-                tf.multiply(target, tf.math.log(pred + eps)) + tf.multiply(1 - target, tf.math.log(1 - pred + eps))))
-    '''bce = BinaryCrossentropy(from_logits=True)
-    return bce(target, pred)'''
+def cross_entropy(target, pred, dim=1, weights=None, eps=EPS):
+    # if weights == None:
+    #     weights = tf.ones_like(pred)
+    # return -tf.squeeze(
+    #         tf.multiply(weights, 
+    #             tf.multiply(target, tf.math.log(pred + eps)) + tf.multiply(1 - target, tf.math.log(1 - pred + eps))))
+    
+    if dim == 1:
+        bce = BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.NONE)
+        return bce(target, pred)
+    else: 
+        cce = CategoricalCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.NONE)
+        return cce(target, pred)
 
 
 def classification_error(target, pred):

@@ -2,13 +2,27 @@ from pathlib import Path
 import numpy as np
 
 VALID_DATA_NAMES = ['adult', 'adult-race', 'german', 'titanic', 'heritage-health']
+VALID_FILE_NAMES = {
+    'adult':'adult', 
+    'adult-race':'adult', 
+    'german':'german', 
+    'titanic':'titanic', 
+    'heritage-health':'heritage-health'
+}
 VALID_LEARNING_STEPS = ['train', 'valid', 'test']
 ACCESS_INDEXES = {
     'adult': [slice(-1), -1, -2],
-    'adult-race':[],
+    'adult-race':[slice(-1), -1, slice(63, 68)],
     'german':[],
     'titanic':[],
     'heritage-health':[]
+}
+DIMENSIONS = {
+    'adult':[112, 1, 1], #[X, Y, A]
+    'adult-race': [112, 1, 5], 
+    'german':'german', 
+    'titanic':'titanic', 
+    'heritage-health':'heritage-health'
 }
 
 
@@ -32,26 +46,26 @@ def load_data(data_name, learning_step):
 
     data_folder = select_data_folder(data_name)
     access_indexes = get_access_indexes(data_name)
-    x, y, a = select_data_step(learning_step, access_indexes, data_folder)
+    x, y, a = select_data_step(learning_step, access_indexes, data_folder, data_name)
     
     return x, y, a
 
 
 def select_data_folder(data_name):
-    return Path(r'data/{}'.format(data_name))
+    return Path(r'data/{}'.format(VALID_FILE_NAMES[data_name]))
 
 
 def get_access_indexes(data_name):
     return ACCESS_INDEXES[data_name]
 
 
-def select_data_step(learning_step, access_indexes, data_folder):
+def select_data_step(learning_step, access_indexes, data_folder, data_name):
     file = data_folder/r'post_prep/{}.csv'.format(learning_step)
     data = np.genfromtxt(file, delimiter=',', skip_header=True)[:, 1:]
 
     num_examples = data.shape[0]
     x = data[:, access_indexes[0]]
-    y = data[:, access_indexes[1]].reshape(num_examples, 1)
-    a = data[:, access_indexes[2]].reshape(num_examples, 1)
+    y = data[:, access_indexes[1]].reshape(num_examples, DIMENSIONS[data_name][1])
+    a = data[:, access_indexes[2]].reshape(num_examples, DIMENSIONS[data_name][2])
     
     return x, y, a

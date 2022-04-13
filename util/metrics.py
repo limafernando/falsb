@@ -104,29 +104,27 @@ def errRate(Y, Ypred):
 def accuracy(Y, Ypred):
     return 1 - errRate(Y, Ypred)
 
-def subgroup(fn, mask, Y, Ypred=None):
-    #print('call subgroup')
-    m = np.greater(mask, 0.5).flatten()
-    #print(m[:5])
-    Yf = Y.flatten()
-    if not Ypred is None: #two-argument functions
-        Ypredf = Ypred.flatten()
-        #print('call function {}'.format(fn))
-        return fn(Yf[m], Ypredf[m]) #access the indexes that are True (the True check subgroup)
-    else: #one-argument functions
-        return fn(Yf[m])
-
-def DI_FP(Y, Ypred, A):
+def DI_FP(Y, Ypred, A, adim):
     #print('call di fp')
-    fpr1 = subgroup(FPR, A, Y, Ypred)
-    fpr0 = subgroup(FPR, 1 - A, Y, Ypred)
-    return abs(fpr1 - fpr0)
+    if adim == 1:
+        fpr1 = subgroup(FPR, A, Y, Ypred)
+        fpr0 = subgroup(FPR, 1 - A, Y, Ypred)
+        return abs(fpr1 - fpr0)
+
+    group_difference = categorical_subgroup(fn=FPR, Amask=A, adim=adim, Y=Y, Ypred=Ypred)
+
+    return (abs(group_difference))
     
-def DI_TP(Y, Ypred, A):
+def DI_TP(Y, Ypred, A, adim):
     #print('call di tp')
-    fpr1 = subgroup(TPR, A, Y, Ypred)
-    fpr0 = subgroup(TPR, 1 - A, Y, Ypred)
-    return abs(fpr1 - fpr0)
+    if adim == 1:
+        tpr1 = subgroup(TPR, A, Y, Ypred)
+        tpr0 = subgroup(TPR, 1 - A, Y, Ypred)
+        return abs(tpr1 - tpr0)
+
+    group_difference = categorical_subgroup(fn=TPR, Amask=A, adim=adim, Y=Y, Ypred=Ypred)
+
+    return (abs(group_difference))
 
 def DI_FN(Y, Ypred, A):
     #print('call di fn')
@@ -150,21 +148,79 @@ def DI(Y, Ypred, A):
     #print('call di')
     return (DI_FN(Y, Ypred, A) + DI_FP(Y, Ypred, A)) * 0.5
 '''
-def DEqOdds(Y, Ypred, A): #deltaEOdds
+def DEqOdds(Y, Ypred, A, adim): #deltaEOdds
     #print('call di')
-    return 1 - ((DI_TP(Y, Ypred, A) + DI_FP(Y, Ypred, A)) * 0.5)
+    return 1 - ((DI_TP(Y, Ypred, A, adim) + DI_FP(Y, Ypred, A, adim)) * 0.5)
 
 ''' CONSIDER THE TRUE POSITIVE FOR BOTH GROUPS
 def DI_soft(Y, Ypred, A): #deltaEOpp
     return (DI_FN_soft(Y, Ypred, A) + DI_FP_soft(Y, Ypred, A)) * 0.5'''
 
-def DEqOpp(Y, Ypred, A): #deltaEOpp
-    tpr1 = subgroup(TPR, A, Y, Ypred)
-    tpr0 = subgroup(TPR, 1 - A, Y, Ypred)
-    return 1 - (abs(tpr1 - tpr0))
+def DEqOpp(Y, Ypred, A, adim): #deltaEOpp
+    
+    if adim == 1:
+        tpr1 = subgroup(TPR, A, Y, Ypred)
+        tpr0 = subgroup(TPR, 1 - A, Y, Ypred)
+        return 1 - (abs(tpr1 - tpr0))
 
-def DP(Ypred, A): #deltaDP
-    return 1 - (abs(subgroup(PR, A, Ypred) - subgroup(PR, 1 - A, Ypred)))
+    group_difference = categorical_subgroup(fn=TPR, Amask=A, adim=adim, Y=Y, Ypred=Ypred)
+
+    return 1 - (abs(group_difference))
+    
+
+def DP(Ypred, A, adim): #deltaDP
+    if adim == 1:
+        return 1 - (abs(subgroup(PR, A, Ypred) - subgroup(PR, 1 - A, Ypred)))
+
+    group_difference = categorical_subgroup(fn=PR, Amask=A, adim=adim, Y=Ypred)
+
+    return 1 - (abs(group_difference))
+
+def categorical_subgroup(fn, Amask, adim, Y, Ypred=None, priviliged_idx=-1):
+    # in our data prep for adult dataset 
+    # the race order id 'race_ Amer-Indian-Eskimo','race_ Asian-Pac-Islander','race_ Black','race_ Other','race_ White'
+    # we want to know the difference between 'race_ White' and the others
+    
+    groups_difference = []
+
+    priviliged_result = subgroup(fn, Amask[:, priviliged_idx], Y, Ypred)
+    
+    if priviliged_idx == -1:
+        idx_list = [idx for idx in range(adim)][:-1]
+    else:
+        idx_list = [idx for idx in range(adim) if idx != priviliged_idx]
+
+    for group_idx in idx_list:
+        group_result = subgroup(fn, Amask[:, group_idx], Y, Ypred)
+        groups_difference.append(
+            abs(priviliged_result - group_result)
+        )
+    #print(groups_difference)
+    reduce_mean = sum(groups_difference)/len(groups_difference)
+    
+    return reduce_mean
+
+    # previous categorical_subgroup implementation
+    # group_difference = []
+    # for group_idx in range(adim):
+    #     if group_difference:
+    #         group_difference -= subgroup(fn, Amask[:, group_idx], Y, Ypred)
+    #     else:
+    #         group_difference = subgroup(fn, Amask[:, group_idx], Y, Ypred)
+    
+    # return group_difference
+
+def subgroup(fn, mask, Y, Ypred=None):
+    #print('call subgroup')
+    m = np.greater(mask, 0.5).flatten()
+    #print(m[:5])
+    Yf = Y.flatten()
+    if not Ypred is None: #two-argument functions
+        Ypredf = Ypred.flatten()
+        #print('call function {}'.format(fn))
+        return fn(Yf[m], Ypredf[m]) #access the indexes that are True (the True check subgroup)
+    else: #one-argument functions
+        return fn(Yf[m])
 
 def NLL(Y, Ypred, eps=eps):
     return -np.mean(np.multiply(Y, np.log(Ypred + eps)) + np.multiply(1. - Y, np.log(1 - Ypred + eps)))
