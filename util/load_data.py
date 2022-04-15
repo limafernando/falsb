@@ -1,5 +1,8 @@
-from pathlib import Path
 import numpy as np
+import os
+from pathlib import Path
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 VALID_DATA_NAMES = ['adult', 'adult-race', 'german', 'titanic', 'heritage-health']
 VALID_FILE_NAMES = {
@@ -52,7 +55,7 @@ def load_data(data_name, learning_step):
 
 
 def select_data_folder(data_name):
-    return Path(r'data/{}'.format(VALID_FILE_NAMES[data_name]))
+    return os.path.join(ROOT_DIR, Path(r'../data/{}'.format(VALID_FILE_NAMES[data_name])))
 
 
 def get_access_indexes(data_name):
@@ -60,7 +63,7 @@ def get_access_indexes(data_name):
 
 
 def select_data_step(learning_step, access_indexes, data_folder, data_name):
-    file = data_folder/r'post_prep/{}.csv'.format(learning_step)
+    file = os.path.join(data_folder, Path(r'post_prep/{}.csv'.format(learning_step)))
     data = np.genfromtxt(file, delimiter=',', skip_header=True)[:, 1:]
 
     num_examples = data.shape[0]
