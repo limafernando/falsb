@@ -1,16 +1,13 @@
-from math import sqrt, isnan
+from math import isnan
 
+
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 from util import metrics
 
-from zhang.models import FairLogisticRegression
 
 def projection(V, A):
     if not np.all(V.numpy()):
@@ -23,6 +20,7 @@ def projection(V, A):
         P = tf.multiply(P, V)
         P = tf.divide(P, tf.norm(V))
         return P
+
 
 def train(model, X, Y, A, optimizer, alpha=1):
     adv_vars = [model.adv.U, model.b, model.adv.c]
@@ -66,6 +64,7 @@ def train(model, X, Y, A, optimizer, alpha=1):
     
     model(X, Y, A) #to compute the foward
     return False
+
 
 def train_loop(model, raw_data, train_dataset, epochs, opt=None):
     

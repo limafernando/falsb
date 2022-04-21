@@ -168,29 +168,6 @@ class Classifier():
         bce = BinaryCrossentropy(from_logits=False)
         return bce(Y, Y_hat)
 
-##########################################################################################################################
-
-class UnfairLogisticRegression():
-    def __init__(self, xdim, batch_size, initializer = GlorotNormal):
-        
-        self.ini = initializer()
-        self.batch_size = batch_size
-        self.clas = Classifier(xdim)
-
-        self.b = tf.Variable(tf.ones([self.batch_size, 1]), name='b')
-        #self.b = tf.Variable(self.ini(shape=(self.batch_size, 1)), name='b')
-        #self.b = tf.Variable(tf.zeros([1,1]), name='b')
-
-    def __call__(self, X, Y, A):
-
-        #ensure casting
-        self.X = tf.dtypes.cast(X, tf.float32)
-        self.Y = tf.dtypes.cast(Y, tf.float32)
-        self.A = tf.dtypes.cast(A, tf.float32)
-
-        self.Y_hat = self.clas(self.X, self.b)
-        self.clas_loss = self.clas.get_loss(self.Y, self.Y_hat)
-        self.model_loss = self.clas_loss
 
 ##########################################################################################################################
 
