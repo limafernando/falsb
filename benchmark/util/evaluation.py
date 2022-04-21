@@ -3,14 +3,14 @@ import numpy as np
 
 from util import metrics
 
-def evaluation(model, evaluation_data):
+def fair_evaluation(model, data):
     Y_hat = None
     A_hat = None
     Y_real = None
     A_real = None
     batch_count = 1
     
-    for X, Y, A in evaluation_data:
+    for X, Y, A in data:
         
         model(X, Y, A)
         
@@ -28,19 +28,20 @@ def evaluation(model, evaluation_data):
     
     return Y_real, A_real, Y_hat, A_hat
 
-def compute_metrics(Y, A, Y_hat, A_hat, adim=1):
 
+def compute_metrics(Y, A, Y_hat, A_hat=None, adim=1):
+    print("> Evaluation")
     Y = Y.numpy()
     A = A.numpy()
 
     Y_hat = tf.math.round(Y_hat)
-    A_hat = tf.math.round(A_hat)
-    
     clas_acc = metrics.accuracy(Y, Y_hat)
-    adv_acc = metrics.accuracy(A, A_hat)
-
-    print("> Class Acc | Adv Acc")
-    print("> {} | {}".format(clas_acc, adv_acc))
+    print("> Class Acc = {}".format(clas_acc))
+    
+    if A_hat is not None:
+        A_hat = tf.math.round(A_hat)
+        adv_acc = metrics.accuracy(A, A_hat)
+        print("> Adv Acc = {}".format(clas_acc, adv_acc))
 
     dp = metrics.DP(Y_hat.numpy(), A, adim)
     deqodds = metrics.DEqOdds(Y, Y_hat.numpy(), A, adim)
@@ -66,6 +67,31 @@ def compute_metrics(Y, A, Y_hat, A_hat, adim=1):
         return clas_acc, dp, deqodds, deqopp, confusion_matrix, metrics_a0, metrics_a1
 
     return clas_acc, dp, deqodds, deqopp, confusion_matrix#, metrics_a0, metrics_a1
+
+
+def evaluation(model, data):
+    Y_hat = None
+    Y_real = None
+    A_real = None
+    batch_count = 1
+    
+    for X, Y, A in data:
+        
+        model(X, Y, A)
+        
+        if batch_count == 1:
+            Y_hat = model.Y_hat
+            Y_real = Y
+            A_real = A
+            batch_count += 1
+        else:
+            Y_hat = tf.concat([Y_hat, model.Y_hat], 0)
+
+            Y_real = tf.concat([Y_real, Y], 0)
+            A_real = tf.concat([A_real, A], 0)
+    
+    return Y_real, A_real, Y_hat
+
 
 def compute_tradeoff(performance_metric, fairness_metric):
     tradeoff = 2*(performance_metric*fairness_metric)/(performance_metric+fairness_metric)
