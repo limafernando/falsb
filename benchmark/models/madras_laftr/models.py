@@ -1,6 +1,4 @@
-from zlib import Z_DEFAULT_STRATEGY
 import tensorflow as tf
-from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.initializers import GlorotNormal, Zeros, Ones
 from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy
 
@@ -136,9 +134,9 @@ class Decoder(tf.Module):
         return layer
 
 class Classifier(tf.Module):
-    def __init__(self, zdim, hidden_layer_specs, ydim, initializer = GlorotNormal):
+    def __init__(self, ydim, zdim, hidden_layer_specs, initializer = GlorotNormal):
         super().__init__()
-
+        self.ydim = ydim
         self.zdim = zdim #input dimension from latent representation
         self.hidden_layer_specs = hidden_layer_specs['clas']
         self.ydim = ydim #output shape
@@ -171,7 +169,10 @@ class Classifier(tf.Module):
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
-        return tf.nn.sigmoid(layer)
+        if self.ydim == 1:
+            return tf.nn.sigmoid(layer)
+        else:
+            return tf.nn.softmax(layer)
 
 class Adversarial(tf.Module):
     def __init__(self, zdim, hidden_layer_specs, adim, initializer = GlorotNormal):
