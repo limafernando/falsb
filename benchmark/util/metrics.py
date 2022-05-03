@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 eps = 1e-12
 
@@ -101,8 +102,18 @@ def calibNegRate(Y, Ypred):
 def errRate(Y, Ypred):
     return (FP(Y, Ypred) + FN(Y, Ypred)) / float(Y.shape[0])
 
+'''def accuracy(Y, Ypred):
+    return 1 - errRate(Y, Ypred)'''
+
 def accuracy(Y, Ypred):
-    return 1 - errRate(Y, Ypred)
+
+    if Y.shape[1] > 1:
+        acc = tf.keras.metrics.CategoricalAccuracy()
+    else:
+        acc = tf.keras.metrics.BinaryAccuracy()
+    
+    acc.update_state(y_true= Y, y_pred=Ypred)
+    return acc.result().numpy()
 
 def DI_FP(Y, Ypred, A, adim):
     #print('call di fp')
