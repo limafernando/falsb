@@ -252,7 +252,7 @@ class DemParGan(tf.Module):
         self.A_hat = self.adv(self.get_adv_input()) #adversarial prediction for A
         self.X_hat = self.dec(tf.concat([self.Z, self.A], 1)) #reconstructed X
         
-        self.clas_loss = self.get_clas_loss(self.Y_hat, self.Y)
+        self.clas_loss = self.get_clas_loss(self.Y_hat, self.Y, self.ydim)
         self.recon_loss = self.get_recon_loss(self.X_hat, self.X)
         self.adv_loss = self.get_advers_loss(self.A_hat, self.A, self.adim)
         self.loss = self.get_loss()
@@ -262,8 +262,8 @@ class DemParGan(tf.Module):
         return (self.Z, self.Y_hat, self.A_hat, self.X_hat, 
                 self.clas_loss, self.recon_loss, self.adv_loss, self.loss, self.clas_err, self.adv_err)
         
-    def get_clas_loss(self, Y_hat, Y):
-        return cross_entropy(Y, Y_hat)
+    def get_clas_loss(self, Y_hat, Y, ydim):
+        return cross_entropy(Y, Y_hat, ydim)
 
     def get_recon_loss(self, X_hat, X):
         return tf.reduce_mean(tf.square(X - X_hat), axis=1)
