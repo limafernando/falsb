@@ -136,10 +136,11 @@ class Decoder(tf.Module):
 class Classifier(tf.Module):
     def __init__(self, ydim, zdim, hidden_layer_specs, initializer = GlorotNormal):
         super().__init__()
-        self.ydim = ydim
+        
         self.zdim = zdim #input dimension from latent representation
         self.hidden_layer_specs = hidden_layer_specs['clas']
         self.ydim = ydim #output shape
+        
         self.shapes = [self.zdim] + self.hidden_layer_specs + [self.ydim]
 
         self.ini = initializer()
@@ -235,7 +236,7 @@ class DemParGan(tf.Module):
         self.fair_coeff = fair_coeff
 
         self.enc = Encoder(self.xdim, self.hidden_layer_specs, self.zdim)
-        self.clas = Classifier(self.zdim, self.hidden_layer_specs, self.ydim)
+        self.clas = Classifier(self.ydim, self.zdim, self.hidden_layer_specs)
         self.adv = Adversarial(self.zdim, self.hidden_layer_specs, self.adim)
         self.dec = Decoder(self.zdim, self.adim, self.hidden_layer_specs, self.xdim)
 
