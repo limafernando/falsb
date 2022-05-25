@@ -7,12 +7,12 @@ EPS = 1e-8
 ######################################################################################################
 
 class Encoder(tf.Module):
-    def __init__(self, xdim, hidden_layer_specs, zdim, initializer = GlorotNormal):
+    def __init__(self, xdim, initializer = GlorotNormal):
         super().__init__()
-
+        
         self.xdim = xdim #input dimension
-        self.hidden_layer_specs = hidden_layer_specs['enc']
-        self.zdim = zdim #output dimension
+        self.hidden_layer_specs = [128]
+        self.zdim = xdim #output dimension equal to xdim
         self.shapes = [self.xdim] + self.hidden_layer_specs + [self.zdim]
 
         self.ini = initializer()
@@ -37,24 +37,23 @@ class Encoder(tf.Module):
         for layer_idx in range(len(self.hidden_layer_specs)):
             
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
-            layer = tf.nn.leaky_relu(layer)
+            layer = tf.nn.relu(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
 
         return layer
-
 ######################################################################################################
 
 class SharedHiddenLayer(tf.Module):
-    def __init__(self, ydim, zdim, hidden_layer_specs, initializer = GlorotNormal):
+    def __init__(self, xdim, ydim, initializer = GlorotNormal):
         super().__init__()
 
-        self.zdim = zdim #input dimension from latent representation
-        self.hidden_layer_specs = hidden_layer_specs['clas'] #single hl w/ 128
-        self.ydim = ydim #output shape
+        self.xdim = xdim
+        self.hidden_layer_specs = [128]
+        self.ydim = ydim
         
-        self.shapes = [self.zdim] + self.hidden_layer_specs + [self.ydim]
+        self.shapes = [self.xdim] + self.hidden_layer_specs + [self.ydim]
 
         self.ini = initializer()
         self.zeros = Zeros()
@@ -62,18 +61,19 @@ class SharedHiddenLayer(tf.Module):
 
         self.is_built = False
 
-    def __call__(self, Z, hidden_activ_fn=tf.nn.relu, out_activ_fn=tf.nn.sigmoid):
+    def __call__(self, X, hidden_activ_fn=tf.nn.relu, out_activ_fn=tf.nn.sigmoid):
         
-        batch_size = Z.shape[0]
+        batch_size = X.shape[0]
+
         if not self.is_built:
-            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='Clas_Ws') 
+            self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='shl_Ws') 
                                                                                 for i in range(len(self.shapes)-1)]
-            self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='Clas_bs') 
+            self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='shl_bs') 
                                                                                 for i in range(len(self.shapes)-1)]
 
             self.is_built = True                                                                                
 
-        prev_layer = Z
+        prev_layer = X
         
         for layer_idx in range(len(self.hidden_layer_specs)):
 
@@ -120,72 +120,73 @@ class Beutel(tf.Module):
     Specialized LAFTR for demographic parity
     """
 
-    def __init__(self, xdim, ydim, adim, zdim, hidden_layer_specs, fairdef='DemPar'):
+    def __init__(self, xdim, ydim, adim, zdim, fair_coeff, fairdef='DemPar'):
         super().__init__()
 
         self.xdim = xdim #input dimensions
         self.ydim = ydim #label dimension
         self.zdim = zdim #reconstruction dimension
-        self.adim = adim #sensitive atribute dimension        
-        self.hidden_layer_specs = hidden_layer_specs
+        self.adim = adim #sensitive atribute dimension
+        self.fair_coeff = fair_coeff
         self.fairdef = fairdef
 
-        self.enc = Encoder(self.xdim, self.hidden_layer_specs, self.zdim)
-        self.clas = Classifier(self.ydim, self.zdim, self.hidden_layer_specs)
-        self.adv = self.get_adv_model(self.fairdef)
+        self.enc = Encoder(self.xdim)
+        self.shl = SharedHiddenLayer(self.xdim, self.ydim)
+        self.clas = Classifier(self.ydim)
+        self.adv = Adversarial(self.adim)
 
     def __call__(self, X, Y, A):
         
-        #ensure casting
+        # ensure casting
         self.X = tf.dtypes.cast(X, tf.float32)
         self.Y = tf.dtypes.cast(Y, tf.float32)
         self.A = tf.dtypes.cast(A, tf.float32)
         
         self.Z = self.enc(self.X) #computes the latent representation
-        self.Y_hat = self.clas(self.Z, self.Y) #pred Y
-
-        if self.fairdef == 'EqOpp':
-            pass
         
-        else:
-            self.A_hat = self.adv(self.get_adv_input()) #adversarial prediction for A
+        shared_output = self.shl(self.Z)
+
+        self.Y_hat = self.clas(shared_output) #pred Y
+
+        self.A_hat = self.adv(self.get_adv_input(shared_output)) #pred A
+
+        # if self.fairdef == 'EqOpp':
+        #     pass
+        
+        # else:
+        #     self.A_hat = self.adv(self.get_adv_input()) #adversarial prediction for A
         
         self.clas_loss = self.get_clas_loss(self.Y_hat, self.Y, self.ydim)
         self.adv_loss = self.get_advers_loss(self.A_hat, self.A, self.adim)
         
         self.loss = self.get_loss()
         
-        self.clas_err = classification_error(self.Y, self.Y_hat)
-        self.adv_err = classification_error(self.A, self.A_hat)
+        # self.clas_err = classification_error(self.Y, self.Y_hat)
+        # self.adv_err = classification_error(self.A, self.A_hat)
 
-        return (self.Z, self.Y_hat, self.A_hat, self.X_hat, 
-                self.clas_loss, self.recon_loss, self.adv_loss, self.loss, self.clas_err, self.adv_err)
+        # return (self.Z, self.Y_hat, self.A_hat, self.X_hat, 
+        #         self.clas_loss, self.recon_loss, self.adv_loss, self.loss, self.clas_err, self.adv_err)
         
-    def get_clas_loss(self, Y_hat, Y):
-        return cross_entropy(Y, Y_hat)
+    def get_clas_loss(self, Y_hat, Y, ydim):
+        return cross_entropy(Y, Y_hat, ydim)
 
     def get_advers_loss(self, A_hat, A, adim):
+        # return tf.math.multiply(
+        #     -self.fair_coeff, cross_entropy(A, A_hat, adim)
+        # )
         return cross_entropy(A, A_hat, adim)
 
     def get_loss(self):  # produce losses for the fairness task
         return tf.reduce_mean([
-            self.clas_coeff*self.clas_loss,
-            + self.fair_coeff*self.adv_loss
+            self.clas_loss,
+            self.adv_loss
         ])
 
-    def get_adv_input(self):
-        return self.Z
-
-    def get_adv_model(self, fairdef):
-        if fairdef == 'DemPar':
-            return Adversarial
-        # elif fairdef == 'EqOdds':
-        #     return AdversarialEqOdds
-        elif fairdef == 'EqOpp':
-            return Adversarial
-        else:
-            print('Not a valid fairness definition! Setting to EqOdds!')
-            return Adversarial
+    def get_adv_input(self, shared_output):
+        return tf.math.multiply(
+            -self.fair_coeff, shared_output
+        )
+    
 
 ##############################################################################################
 

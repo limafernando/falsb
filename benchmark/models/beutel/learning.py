@@ -5,29 +5,29 @@ def train(model, X, Y, A, optimizer, faircoeff=1):
     
     '''training enc-clas-dec'''
    
-    enc_clas_dec = model.enc.variables + model.clas.variables + model.dec.variables
-    adv = model.adv.variables
+    # enc_clas_dec = model.enc.variables + model.clas.variables + model.dec.variables
+    # adv = model.adv.variables
 
     with tf.GradientTape() as tape_min:
         
-        tape_min.watch(enc_clas_dec)
+        #tape_min.watch(enc_clas_dec)
 
         model(X, Y, A) #to compute the foward
         loss2min = model.loss #current loss
     
-    grads = tape_min.gradient(loss2min, enc_clas_dec)
-    optimizer.apply_gradients(zip(grads, enc_clas_dec))
+    grads = tape_min.gradient(loss2min, model.variables)
+    optimizer.apply_gradients(zip(grads, model.variables))
 
     '''training adv'''
 
-    with tf.GradientTape() as tape_max:
-        tape_max.watch(adv)
-        model(X, Y, A) #to compute the foward
-        loss2max = model.loss
+    # with tf.GradientTape() as tape_max:
+    #     tape_max.watch(adv)
+    #     model(X, Y, A) #to compute the foward
+    #     loss2max = model.loss
 
-    grads_adv = tape_max.gradient(loss2max, adv)
-    grads_adv = -faircoeff * grads_adv
-    optimizer.apply_gradients(zip(grads_adv, adv))
+    # grads_adv = tape_max.gradient(loss2max, adv)
+    # grads_adv = -faircoeff * grads_adv
+    # optimizer.apply_gradients(zip(grads_adv, adv))
 
 
 def train_loop(model, raw_data, train_dataset, epochs, optmizer):
