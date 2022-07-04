@@ -136,10 +136,11 @@ class Decoder(tf.Module):
 class Classifier(tf.Module):
     def __init__(self, ydim, zdim, hidden_layer_specs, initializer = GlorotNormal):
         super().__init__()
-        self.ydim = ydim
+        
         self.zdim = zdim #input dimension from latent representation
         self.hidden_layer_specs = hidden_layer_specs['clas']
         self.ydim = ydim #output shape
+        
         self.shapes = [self.zdim] + self.hidden_layer_specs + [self.ydim]
 
         self.ini = initializer()
@@ -235,7 +236,7 @@ class DemParGan(tf.Module):
         self.fair_coeff = fair_coeff
 
         self.enc = Encoder(self.xdim, self.hidden_layer_specs, self.zdim)
-        self.clas = Classifier(self.zdim, self.hidden_layer_specs, self.ydim)
+        self.clas = Classifier(self.ydim, self.zdim, self.hidden_layer_specs)
         self.adv = Adversarial(self.zdim, self.hidden_layer_specs, self.adim)
         self.dec = Decoder(self.zdim, self.adim, self.hidden_layer_specs, self.xdim)
 
@@ -251,7 +252,7 @@ class DemParGan(tf.Module):
         self.A_hat = self.adv(self.get_adv_input()) #adversarial prediction for A
         self.X_hat = self.dec(tf.concat([self.Z, self.A], 1)) #reconstructed X
         
-        self.clas_loss = self.get_clas_loss(self.Y_hat, self.Y)
+        self.clas_loss = self.get_clas_loss(self.Y_hat, self.Y, self.ydim)
         self.recon_loss = self.get_recon_loss(self.X_hat, self.X)
         self.adv_loss = self.get_advers_loss(self.A_hat, self.A, self.adim)
         self.loss = self.get_loss()
@@ -261,8 +262,8 @@ class DemParGan(tf.Module):
         return (self.Z, self.Y_hat, self.A_hat, self.X_hat, 
                 self.clas_loss, self.recon_loss, self.adv_loss, self.loss, self.clas_err, self.adv_err)
         
-    def get_clas_loss(self, Y_hat, Y):
-        return cross_entropy(Y, Y_hat)
+    def get_clas_loss(self, Y_hat, Y, ydim):
+        return cross_entropy(Y, Y_hat, ydim)
 
     def get_recon_loss(self, X_hat, X):
         return tf.reduce_mean(tf.square(X - X_hat), axis=1)
