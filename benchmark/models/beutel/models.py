@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.initializers import GlorotNormal, Zeros, Ones
+from tensorflow.keras.initializers import GlorotNormal, Zeros, Ones, RandomNormal
 from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy
 
 EPS = 1e-8
@@ -13,9 +13,10 @@ class Encoder(tf.Module):
         self.xdim = xdim #input dimension
         self.hidden_layer_specs = [128]
         self.zdim = xdim #output dimension equal to xdim
-        self.shapes = [self.xdim] + self.hidden_layer_specs + [self.zdim]
+        self.shapes = [self.xdim] + self.hidden_layer_specs + [self.xdim]
 
-        self.ini = initializer()
+        # self.ini = initializer()
+        self.ini = RandomNormal(mean=0.5, stddev=0.5)
         self.zeros = Zeros()
         self.ones = Ones()
 
@@ -37,7 +38,8 @@ class Encoder(tf.Module):
         for layer_idx in range(len(self.hidden_layer_specs)):
             
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
-            layer = tf.nn.relu(layer)
+            # layer = tf.nn.relu(layer)
+            layer = tf.nn.sigmoid(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
@@ -46,14 +48,15 @@ class Encoder(tf.Module):
 ######################################################################################################
 
 class SharedHiddenLayer(tf.Module):
-    def __init__(self, xdim, ydim, initializer = GlorotNormal):
+    def __init__(self, xdim, zdim, initializer = GlorotNormal):
         super().__init__()
 
         self.xdim = xdim
         self.hidden_layer_specs = [128]
-        self.ydim = ydim
+        self.zdim = zdim
         
-        self.shapes = [self.xdim] + self.hidden_layer_specs + [self.ydim]
+        # self.shapes = [self.xdim] + self.hidden_layer_specs + [self.zdim]
+        self.shapes = [self.xdim] + self.hidden_layer_specs + [1]
 
         self.ini = initializer()
         self.zeros = Zeros()
@@ -79,6 +82,7 @@ class SharedHiddenLayer(tf.Module):
 
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
             layer = tf.nn.relu(layer)
+            # layer = tf.nn.sigmoid(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1])
@@ -88,32 +92,90 @@ class SharedHiddenLayer(tf.Module):
 ######################################################################################################
 
 class Classifier(tf.Module):
-    def __init__(self, ydim):
+    def __init__(self, ydim, zdim):
         super().__init__()
         
+        self.zdim = zdim #output shape
         self.ydim = ydim #output shape
+        self.hidden_layer_specs = [128]
+        self.shapes = [self.zdim] + self.hidden_layer_specs + [self.ydim]
 
-    def __call__(self, logit):
+        # self.ini = initializer()
+        self.zeros = Zeros()
+        self.ones = Ones()
+
+        self.is_built = False
+
+    def __call__(self, layer, hidden_activ_fn=tf.nn.relu, out_activ_fn=tf.nn.sigmoid):
+        
+        # batch_size = layer.shape[0]
+
+        # if not self.is_built:
+        #     self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='clas_Ws') 
+        #                                                                         for i in range(len(self.shapes)-1)]
+        #     self.bs = [tf.Variable(self.zeros(shape=(batch_size, self.shapes[i+1])), name='clas_bs') 
+        #                                                                         for i in range(len(self.shapes)-1)]
+
+        #     self.is_built = True                                                                                
+
+        # prev_layer = layer
+        
+        # for layer_idx in range(len(self.hidden_layer_specs)):
+
+        #     layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
+        #     layer = tf.nn.relu(layer)
+        #     prev_layer = layer
+        
+        # layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1])
 
         if self.ydim == 1:
-            return tf.nn.sigmoid(logit)
+            return tf.nn.sigmoid(layer)
         else:
-            return tf.nn.softmax(logit)
+            return tf.nn.softmax(layer)
 
 ######################################################################################################
 
 class Adversarial(tf.Module):
-    def __init__(self, adim):
+    def __init__(self, adim, zdim):
         super().__init__()
         
         self.adim = adim #output shape
+        self.zdim = zdim #output shape
+        self.hidden_layer_specs = [128]
+        self.shapes = [self.zdim] + self.hidden_layer_specs + [self.adim]
 
-    def __call__(self, logit):
+        # self.ini = initializer()
+        self.zeros = Zeros()
+        self.ones = Ones()
+
+        self.is_built = False
+
+    def __call__(self, layer, hidden_activ_fn=tf.nn.relu, out_activ_fn=tf.nn.sigmoid):
+        
+        # batch_size = layer.shape[0]
+
+        # if not self.is_built:
+        #     self.Ws = [tf.Variable(self.zeros(shape=(self.shapes[i+1], self.shapes[i])), name='adv_Ws') 
+        #                                                                         for i in range(len(self.shapes)-1)]
+        #     self.bs = [tf.Variable(self.ones(shape=(batch_size, self.shapes[i+1])), name='adv_bs') 
+        #                                                                         for i in range(len(self.shapes)-1)]
+
+        #     self.is_built = True                                                                                
+
+        # prev_layer = layer
+        
+        # for layer_idx in range(len(self.hidden_layer_specs)):
+
+        #     layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
+        #     layer = tf.nn.relu(layer)
+        #     prev_layer = layer
+        
+        # layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1])
 
         if self.adim == 1:
-            return tf.nn.sigmoid(logit)
+            return tf.nn.sigmoid(layer)
         else:
-            return tf.nn.softmax(logit)
+            return tf.nn.softmax(layer)
 
 class Beutel(tf.Module):
     """
@@ -131,9 +193,9 @@ class Beutel(tf.Module):
         self.fairdef = fairdef
 
         self.enc = Encoder(self.xdim)
-        self.shl = SharedHiddenLayer(self.xdim, self.ydim)
-        self.clas = Classifier(self.ydim)
-        self.adv = Adversarial(self.adim)
+        self.shl = SharedHiddenLayer(self.xdim, self.zdim)
+        self.clas = Classifier(self.ydim, self.zdim)
+        self.adv = Adversarial(self.adim, self.zdim)
 
     def __call__(self, X, Y, A):
         
@@ -142,13 +204,19 @@ class Beutel(tf.Module):
         self.Y = tf.dtypes.cast(Y, tf.float32)
         self.A = tf.dtypes.cast(A, tf.float32)
         
-        self.Z = self.enc(self.X) #computes the latent representation
+        # self.Z = self.enc(self.X) #computes the latent representation
+        self.Z = self.X
         
         shared_output = self.shl(self.Z)
 
         self.Y_hat = self.clas(shared_output) #pred Y
 
-        self.A_hat = self.adv(self.get_adv_input(shared_output)) #pred A
+        # self.A_hat = self.adv(self.get_adv_input(shared_output)) #pred A
+        self.A_hat = self.adv(shared_output*-self.fair_coeff)
+        #     tf.multiply(
+        #         self.fair_coeff, shared_output
+        #     )
+        # )
 
         # if self.fairdef == 'EqOpp':
         #     pass
@@ -158,6 +226,7 @@ class Beutel(tf.Module):
         
         self.clas_loss = self.get_clas_loss(self.Y_hat, self.Y, self.ydim)
         self.adv_loss = self.get_advers_loss(self.A_hat, self.A, self.adim)
+        # self.adv_loss = -1
         
         self.loss = self.get_loss()
         
@@ -171,10 +240,7 @@ class Beutel(tf.Module):
         return cross_entropy(Y, Y_hat, ydim)
 
     def get_advers_loss(self, A_hat, A, adim):
-        # return tf.math.multiply(
-        #     -self.fair_coeff, cross_entropy(A, A_hat, adim)
-        # )
-        return cross_entropy(A, A_hat, adim)
+        return cross_entropy(A, A_hat, adim)#*-self.fair_coeff
 
     def get_loss(self):  # produce losses for the fairness task
         return tf.reduce_mean([
@@ -183,10 +249,10 @@ class Beutel(tf.Module):
         ])
 
     def get_adv_input(self, shared_output):
-        return tf.math.multiply(
-            -self.fair_coeff, shared_output
-        )
-    
+        # return tf.math.multiply(
+        #     -self.fair_coeff, shared_output
+        # )
+        return shared_output
 
 ##############################################################################################
 
