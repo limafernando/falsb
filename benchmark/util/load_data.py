@@ -18,20 +18,20 @@ VALID_LEARNING_STEPS = ['train', 'valid', 'test']
 ACCESS_INDEXES = {
     'adult': [slice(-1), -1, -2],
     'adult-race':[slice(-1), -1, slice(63, 68)],
-    'german':[],
-    'titanic':[],
+    'german':[slice(-1), -1, -2],
+    'titanic':[slice(-1), -1, -2],
     'heritage-health':[]
 }
 DIMENSIONS = {
-    'adult':[112, 1, 1], #[X, Y, A]
+    'adult': [112, 1, 1], #[X, Y, A]
     'adult-race': [112, 1, 5], 
-    'german':'german', 
-    'titanic':'titanic', 
+    'german': [31, 1, 1], 
+    'titanic': [19, 1, 1], 
     'heritage-health':'heritage-health'
 }
 
 
-def load_data(data_name, learning_step, kind='np'):
+def load_data(data_name, learning_step=None, kind='np'):
     """Function to load data.
 
     Args:
@@ -45,7 +45,10 @@ def load_data(data_name, learning_step, kind='np'):
         print('Invalid data name! Input: {} | Valid data names: [{}]',format(VALID_DATA_NAMES))
         return None
 
-    if not learning_step in VALID_LEARNING_STEPS:
+    if learning_step is None:
+        learning_step = data_name
+
+    elif not learning_step in VALID_LEARNING_STEPS:
         print('Invalid data name! Input: {} | Valid steps: [{}]',format(VALID_LEARNING_STEPS))
         return None
 
