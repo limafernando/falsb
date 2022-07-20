@@ -46,7 +46,7 @@ def load_data(data_name, learning_step=None, kind='np'):
         return None
 
     if learning_step is None:
-        learning_step = data_name
+        learning_step = VALID_FILE_NAMES[data_name]
 
     elif not learning_step in VALID_LEARNING_STEPS:
         print('Invalid data name! Input: {} | Valid steps: [{}]',format(VALID_LEARNING_STEPS))
