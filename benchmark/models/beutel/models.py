@@ -38,8 +38,8 @@ class Encoder(tf.Module):
         for layer_idx in range(len(self.hidden_layer_specs)):
             
             layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[layer_idx])), self.bs[layer_idx])
-            # layer = tf.nn.relu(layer)
-            layer = tf.nn.sigmoid(layer)
+            layer = tf.nn.relu(layer)
+            # layer = tf.nn.sigmoid(layer)
             prev_layer = layer
         
         layer = tf.add(tf.linalg.matmul(prev_layer, tf.transpose(self.Ws[-1])), self.bs[-1]) #last layer
@@ -204,8 +204,8 @@ class Beutel(tf.Module):
         self.Y = tf.dtypes.cast(Y, tf.float32)
         self.A = tf.dtypes.cast(A, tf.float32)
         
-        # self.Z = self.enc(self.X) #computes the latent representation
-        self.Z = self.X
+        self.Z = self.enc(self.X) #computes the latent representation
+        # self.Z = self.X
         
         shared_output = self.shl(self.Z)
 
