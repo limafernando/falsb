@@ -130,3 +130,5 @@ dmypy.json
 
 # VisualStudioCode
 .vscode/*
+
+.DS_store

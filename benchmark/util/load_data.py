@@ -6,28 +6,31 @@ import pandas as pd
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-VALID_DATA_NAMES = ['adult', 'adult-race', 'german', 'titanic', 'heritage-health']
+VALID_DATA_NAMES = ['adult', 'adult-race', 'german', 'titanic', 'heritage-health', 'stroke']
 VALID_FILE_NAMES = {
     'adult':'adult', 
     'adult-race':'adult', 
     'german':'german', 
     'titanic':'titanic', 
-    'heritage-health':'heritage-health'
+    'heritage-health':'heritage-health',
+    'stroke': 'stroke'
 }
 VALID_LEARNING_STEPS = ['train', 'valid', 'test']
 ACCESS_INDEXES = {
-    'adult': [slice(-1), -1, -2],
+    'adult': [slice(-1), -1, -2], #[X, Y, A]
     'adult-race':[slice(-1), -1, slice(63, 68)],
     'german':[slice(-1), -1, -2],
     'titanic':[slice(-1), -1, -2],
-    'heritage-health':[]
+    'heritage-health':[],
+    'stroke': [slice(-1), -1, 0]
 }
 DIMENSIONS = {
     'adult': [112, 1, 1], #[X, Y, A]
     'adult-race': [112, 1, 5], 
     'german': [31, 1, 1], 
     'titanic': [19, 1, 1], 
-    'heritage-health':'heritage-health'
+    'heritage-health':'heritage-health',
+    'stroke': [17, 1, 1]
 }
 
 
