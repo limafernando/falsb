@@ -6,14 +6,24 @@ import pandas as pd
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-VALID_DATA_NAMES = ['adult', 'adult-race', 'german', 'titanic', 'heritage-health', 'stroke']
+VALID_DATA_NAMES = ['adult', 'adult-race', 'german', 'titanic', 'heritage-health', 'stroke', 'balanced-stroke']
+VALID_FOLDER_NAMES = {
+    'adult':'adult', 
+    'adult-race':'adult', 
+    'german':'german', 
+    'titanic':'titanic', 
+    'heritage-health':'heritage-health',
+    'stroke': 'stroke',
+    'balanced-stroke': 'stroke'
+}
 VALID_FILE_NAMES = {
     'adult':'adult', 
     'adult-race':'adult', 
     'german':'german', 
     'titanic':'titanic', 
     'heritage-health':'heritage-health',
-    'stroke': 'stroke'
+    'stroke': 'stroke',
+    'balanced-stroke': 'balanced_stroke'
 }
 VALID_LEARNING_STEPS = ['train', 'valid', 'test']
 ACCESS_INDEXES = {
@@ -22,7 +32,8 @@ ACCESS_INDEXES = {
     'german':[slice(-1), -1, -2],
     'titanic':[slice(-1), -1, -2],
     'heritage-health':[],
-    'stroke': [slice(-1), -1, 0]
+    'stroke': [slice(-1), -1, 0],
+    'balanced-stroke': [slice(-1), -1, 0]
 }
 DIMENSIONS = {
     'adult': [112, 1, 1], #[X, Y, A]
@@ -30,7 +41,8 @@ DIMENSIONS = {
     'german': [31, 1, 1], 
     'titanic': [19, 1, 1], 
     'heritage-health':'heritage-health',
-    'stroke': [17, 1, 1]
+    'stroke': [17, 1, 1],
+    'balanced-stroke': [17, 1, 1]
 }
 
 
@@ -66,7 +78,7 @@ def load_data(data_name, learning_step=None, kind='np'):
         return select_data_step_pd(learning_step, access_indexes, data_folder, data_name)
 
 def select_data_folder(data_name):
-    return os.path.join(ROOT_DIR, Path(r'../data/{}'.format(VALID_FILE_NAMES[data_name])))
+    return os.path.join(ROOT_DIR, Path(r'../data/{}'.format(VALID_FOLDER_NAMES[data_name])))
 
 
 def get_access_indexes(data_name):
