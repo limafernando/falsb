@@ -16,6 +16,8 @@ VALID_DATA_NAMES = [
     "balanced-stroke",
     "heart",
     "balanced-heart",
+    "arrhythmia",
+    "balanced-arrhythmia",
 ]
 VALID_FOLDER_NAMES = {
     "adult": "adult",
@@ -27,6 +29,8 @@ VALID_FOLDER_NAMES = {
     "balanced-stroke": "stroke",
     "heart": "heart",
     "balanced-heart": "heart",
+    "arrhythmia": "arrhythmia",
+    "balanced-arrhythmia": "arrhythmia",
 }
 VALID_FILE_NAMES = {
     "adult": "adult",
@@ -38,6 +42,8 @@ VALID_FILE_NAMES = {
     "balanced-stroke": "balanced_stroke",
     "heart": "heart",
     "balanced-heart": "balanced_heart",
+    "arrhythmia": "arrhythmia",
+    "balanced-arrhythmia": "balanced_arrhythmia",
 }
 VALID_LEARNING_STEPS = ["train", "valid", "test"]
 ACCESS_INDEXES = {
@@ -49,7 +55,9 @@ ACCESS_INDEXES = {
     "stroke": [slice(-1), -1, 0],
     "balanced-stroke": [slice(-1), -1, 0],
     "heart": [slice(-1), -1, 1],
-    "balanced-heart": [slice(-1), -1, 0],
+    "balanced-heart": [slice(-1), -1, 1],
+    "arrhythmia": [slice(-1), -1, 1],
+    "balanced-arrhythmia": [slice(-1), -1, 1],
 }
 DIMENSIONS = {
     "adult": [112, 1, 1],  # [X, Y, A]
@@ -61,6 +69,8 @@ DIMENSIONS = {
     "balanced-stroke": [17, 1, 1],
     "heart": [26, 1, 1],
     "balanced-heart": [26, 1, 1],
+    "arrhythmia": [278, 1, 1],
+    "balanced-arrhythmia": [278, 1, 1],
 }
 
 
