@@ -13,11 +13,17 @@ VALID_DATA_NAMES = [
     "titanic",
     "heritage-health",
     "stroke",
+    "stroke-age",
     "balanced-stroke",
+    "balanced-stroke-age",
     "heart",
+    "heart-age",
     "balanced-heart",
+    "balanced-heart-age",
     "arrhythmia",
+    "arrhythmia-age",
     "balanced-arrhythmia",
+    "balanced-arrhythmia-age",
 ]
 VALID_FOLDER_NAMES = {
     "adult": "adult",
@@ -26,11 +32,17 @@ VALID_FOLDER_NAMES = {
     "titanic": "titanic",
     "heritage-health": "heritage-health",
     "stroke": "stroke",
+    "stroke-age": "stroke",
     "balanced-stroke": "stroke",
+    "balanced-stroke-age": "stroke",
     "heart": "heart",
+    "heart-age": "heart",
     "balanced-heart": "heart",
+    "balanced-heart-age": "heart",
     "arrhythmia": "arrhythmia",
+    "arrhythmia-age": "arrhythmia",
     "balanced-arrhythmia": "arrhythmia",
+    "balanced-arrhythmia-age": "arrhythmia",
 }
 VALID_FILE_NAMES = {
     "adult": "adult",
@@ -39,11 +51,17 @@ VALID_FILE_NAMES = {
     "titanic": "titanic",
     "heritage-health": "heritage-health",
     "stroke": "stroke",
+    "stroke-age": "stroke",
     "balanced-stroke": "balanced_stroke",
+    "balanced-stroke-age": "balanced_stroke",
     "heart": "heart",
+    "heart-age": "heart",
     "balanced-heart": "balanced_heart",
+    "balanced-heart-age": "balanced_heart",
     "arrhythmia": "arrhythmia",
+    "arrhythmia-age": "arrhythmia",
     "balanced-arrhythmia": "balanced_arrhythmia",
+    "balanced-arrhythmia-age": "balanced_arrhythmia",
 }
 VALID_LEARNING_STEPS = ["train", "valid", "test"]
 ACCESS_INDEXES = {
@@ -53,11 +71,17 @@ ACCESS_INDEXES = {
     "titanic": [slice(-1), -1, -2],
     "heritage-health": [],
     "stroke": [slice(-1), -1, 0],
+    "stroke-age": [slice(-1), -1, 1],
     "balanced-stroke": [slice(-1), -1, 0],
+    "balanced-stroke-age": [slice(-1), -1, 1],
     "heart": [slice(-1), -1, 1],
+    "heart-age": [slice(-1), -1, 0],
     "balanced-heart": [slice(-1), -1, 1],
+    "balanced-heart-age": [slice(-1), -1, 0],
     "arrhythmia": [slice(-1), -1, 1],
+    "arrhythmia-age": [slice(-1), -1, 0],
     "balanced-arrhythmia": [slice(-1), -1, 1],
+    "balanced-arrhythmia-age": [slice(-1), -1, 0],
 }
 DIMENSIONS = {
     "adult": [112, 1, 1],  # [X, Y, A]
@@ -66,11 +90,17 @@ DIMENSIONS = {
     "titanic": [19, 1, 1],
     "heritage-health": "heritage-health",
     "stroke": [17, 1, 1],
+    "stroke-age": [17, 1, 1],
     "balanced-stroke": [17, 1, 1],
+    "balanced-stroke-age": [17, 1, 1],
     "heart": [26, 1, 1],
+    "heart-age": [26, 1, 1],
     "balanced-heart": [26, 1, 1],
+    "balanced-heart-age": [26, 1, 1],
     "arrhythmia": [278, 1, 1],
+    "arrhythmia-age": [278, 1, 1],
     "balanced-arrhythmia": [278, 1, 1],
+    "balanced-arrhythmia-age": [278, 1, 1],
 }
 
 
